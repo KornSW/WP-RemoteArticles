@@ -9,6 +9,9 @@ use KornSW\RemoteArticles\Embedding\CssSanitizer;
 use KornSW\RemoteArticles\Embedding\HtmlSanitizer;
 use KornSW\RemoteArticles\Embedding\LinkClassifier;
 use KornSW\RemoteArticles\Embedding\UrlResolver;
+use KornSW\RemoteArticles\Galleries\GalleryPlaceholderInserter;
+use KornSW\RemoteArticles\Galleries\ShareOneDriveGalleries;
+use KornSW\RemoteArticles\Galleries\ShareOneDriveResponseParser;
 use KornSW\RemoteArticles\Import\CapsulePresenter;
 use KornSW\RemoteArticles\Import\CapsuleStore;
 use KornSW\RemoteArticles\Import\ImportRuleParser;
@@ -35,6 +38,7 @@ final class Plugin {
     private readonly RemoteArticlesShortcode $shortcode,
     private readonly CapsulePresenter $capsulePresenter,
     private readonly SyncScheduler $syncScheduler,
+    private readonly ShareOneDriveGalleries $shareOneDriveGalleries,
     private readonly SettingsPage $settingsPage
   ) {
   }
@@ -77,8 +81,15 @@ final class Plugin {
 
     $urlResolver = new UrlResolver();
     $htmlSanitizer = new HtmlSanitizer($urlResolver, new CssSanitizer($urlResolver), new LinkClassifier($urlResolver));
-    $articleListRenderer = new ArticleListRenderer($htmlSanitizer, $urlResolver);
     $assetLoader = new AssetLoader($settings);
+    $shareOneDriveGalleries = new ShareOneDriveGalleries(
+      $sourceRepository,
+      $remoteClient,
+      new ShareOneDriveResponseParser($urlResolver),
+      new GalleryPlaceholderInserter(),
+      $assetLoader
+    );
+    $articleListRenderer = new ArticleListRenderer($htmlSanitizer, $urlResolver, $shareOneDriveGalleries);
 
     $capsuleStore = new CapsuleStore();
     $importRuleParser = new ImportRuleParser();
@@ -87,8 +98,9 @@ final class Plugin {
 
     return new Plugin(
       new RemoteArticlesShortcode($sourceRepository, $articleRepository, $articleListRenderer, $assetLoader),
-      new CapsulePresenter($capsuleStore, $sourceRepository, $htmlSanitizer, $urlResolver, $assetLoader),
+      new CapsulePresenter($capsuleStore, $sourceRepository, $htmlSanitizer, $urlResolver, $assetLoader, $shareOneDriveGalleries),
       new SyncScheduler($sourceRepository, $synchronizer, $syncStatusRepository),
+      $shareOneDriveGalleries,
       new SettingsPage($sourceRepository, $settings, $secretBox, $remoteClient, $importRuleParser, $synchronizer, $capsuleStore, $syncStatusRepository)
     );
   }
@@ -100,6 +112,7 @@ final class Plugin {
     add_action('init', [$this->shortcode, 'register']);
     add_action('init', [$this->syncScheduler, 'register']);
     $this->capsulePresenter->register();
+    $this->shareOneDriveGalleries->register();
     if (is_admin()) {
       $this->settingsPage->register();
     }

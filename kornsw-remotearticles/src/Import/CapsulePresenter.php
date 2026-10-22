@@ -8,6 +8,7 @@ use KornSW\RemoteArticles\Embedding\EmbeddingContext;
 use KornSW\RemoteArticles\Embedding\HtmlSanitizer;
 use KornSW\RemoteArticles\Embedding\LinkMode;
 use KornSW\RemoteArticles\Embedding\UrlResolver;
+use KornSW\RemoteArticles\Galleries\ShareOneDriveGalleries;
 use KornSW\RemoteArticles\Rendering\AssetLoader;
 use KornSW\RemoteArticles\Sources\SourceRepository;
 
@@ -34,7 +35,8 @@ final class CapsulePresenter {
     private readonly SourceRepository $sourceRepository,
     private readonly HtmlSanitizer $htmlSanitizer,
     private readonly UrlResolver $urlResolver,
-    private readonly AssetLoader $assetLoader
+    private readonly AssetLoader $assetLoader,
+    private readonly ShareOneDriveGalleries $shareOneDriveGalleries
   ) {
     $this->placeholderToken = bin2hex(random_bytes(8));
   }
@@ -43,7 +45,9 @@ final class CapsulePresenter {
    * Registers all filters.
    */
   public function register(): void {
-    add_filter('the_content', [$this, 'insertPlaceholder'], 9);
+    // First and last priority: other content filters (wpautop, do_shortcode, but also e.g. Markdown plugins that escape
+    // HTML and turn indented lines into code blocks) only ever see the harmless placeholder.
+    add_filter('the_content', [$this, 'insertPlaceholder'], PHP_INT_MIN);
     add_filter('the_content', [$this, 'replacePlaceholders'], PHP_INT_MAX);
 
     add_filter('image_downsize', [$this, 'filterImageDownsize'], 10, 3);
@@ -65,12 +69,17 @@ final class CapsulePresenter {
   }
 
   /**
-   * the_content, priority 9 (before wpautop and do_shortcode): replaces the content of a capsule by a placeholder.
+   * the_content, first priority: replaces the content of a capsule by a placeholder.
    * Only content carrying the capsule marker is replaced, not other texts filtered while a capsule is the current post.
+   * The marker is also recognized in escaped form, in case a plugin altered post_content when the capsule was saved.
    */
   public function insertPlaceholder(mixed $content): mixed {
     $post = get_post();
-    if (!is_string($content) || $post === null || !str_contains($content, CapsuleStore::CONTENT_MARKER)) {
+    if (!is_string($content) || $post === null) {
+      return $content;
+    }
+    $hasMarker = str_contains($content, CapsuleStore::CONTENT_MARKER) || str_contains($content, esc_html(CapsuleStore::CONTENT_MARKER));
+    if (!$hasMarker) {
       return $content;
     }
     if (!$this->capsuleStore->isCapsule($post->ID)) {
@@ -129,7 +138,11 @@ final class CapsulePresenter {
     );
 
     $this->assetLoader->enqueueFor($source);
-    return '<div class="kornsw-ra-content" id="' . esc_attr($elementId) . '">' . $this->htmlSanitizer->sanitize($rawContent, $context) . '</div>';
+    $sanitizedHtml = $this->htmlSanitizer->sanitize($rawContent, $context);
+    if ($source !== null) {
+      $sanitizedHtml = $this->shareOneDriveGalleries->embed($sanitizedHtml, $source, $originalUrl);
+    }
+    return '<div class="kornsw-ra-content" id="' . esc_attr($elementId) . '">' . $sanitizedHtml . '</div>';
   }
 
   /**

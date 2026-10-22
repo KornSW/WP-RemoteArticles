@@ -8,6 +8,7 @@ use KornSW\RemoteArticles\Embedding\EmbeddingContext;
 use KornSW\RemoteArticles\Embedding\HtmlSanitizer;
 use KornSW\RemoteArticles\Embedding\LinkMode;
 use KornSW\RemoteArticles\Embedding\UrlResolver;
+use KornSW\RemoteArticles\Galleries\ShareOneDriveGalleries;
 use KornSW\RemoteArticles\Remote\RemotePost;
 use KornSW\RemoteArticles\Shortcode\ShortcodeOptions;
 use KornSW\RemoteArticles\Sources\Source;
@@ -20,7 +21,8 @@ final class ArticleListRenderer {
 
   public function __construct(
     private readonly HtmlSanitizer $htmlSanitizer,
-    private readonly UrlResolver $urlResolver
+    private readonly UrlResolver $urlResolver,
+    private readonly ShareOneDriveGalleries $shareOneDriveGalleries
   ) {
   }
 
@@ -76,7 +78,9 @@ final class ArticleListRenderer {
     if ($options->showExcerptOnly) {
       $foreignHtml = $post->excerptHtml;
     }
-    $html .= '<div class="kornsw-ra-content">' . $this->htmlSanitizer->sanitize($foreignHtml, $context) . '</div>';
+    $sanitizedHtml = $this->htmlSanitizer->sanitize($foreignHtml, $context);
+    $sanitizedHtml = $this->shareOneDriveGalleries->embed($sanitizedHtml, $source, $documentUrl);
+    $html .= '<div class="kornsw-ra-content">' . $sanitizedHtml . '</div>';
     $html .= '</article>';
     return $html;
   }

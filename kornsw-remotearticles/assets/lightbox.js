@@ -90,6 +90,8 @@
     } else {
       media = document.createElement('img');
       media.alt = item.alt;
+      // Media hosts of embedded content do not need to know the embedding page.
+      media.referrerPolicy = 'no-referrer';
     }
     media.className = 'kornsw-ra-lightbox-media';
     media.src = item.url;
@@ -114,12 +116,15 @@
   }
 
   /**
-   * Opens the lightbox with all media links of the embedded post that contains the clicked link.
+   * Opens the lightbox with all media links of the gallery (or else the embedded post) that contains the clicked link.
    */
   function open(clickedLink) {
     ensureOverlay();
-    var content = clickedLink.closest('.kornsw-ra-content');
-    var links = Array.prototype.slice.call(content.querySelectorAll('a[data-kornsw-ra-media]'));
+    var group = clickedLink.closest('.kornsw-ra-gallery');
+    if (group === null) {
+      group = clickedLink.closest('.kornsw-ra-content');
+    }
+    var links = Array.prototype.slice.call(group.querySelectorAll('a[data-kornsw-ra-media]'));
 
     items = links.map(function (link) {
       var image = link.querySelector('img');

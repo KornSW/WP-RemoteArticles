@@ -128,7 +128,7 @@ Importierte Beiträge sind echte WordPress-Beiträge. Sie sind damit für alle T
 
 | Bedrohung | Gegenmaßnahme |
 | --- | --- |
-| **Fremde Shortcodes:** Text wie `[shortcode]` im Quellinhalt würde bei normaler Ausgabe von der eigenen Seite ausgeführt. Ein Autor der Quelle könnte so lokale Shortcodes auslösen. | Das rohe HTML der Quelle liegt nur in einer Meta-Angabe und durchläuft nie `do_shortcode`. Für die Ausgabe ersetzt das Plugin den Inhalt im `the_content`-Filter **vor** WordPress' Shortcode-Verarbeitung durch einen Platzhalter und setzt das Ergebnis der Pipeline **nach** allen anderen Filtern ein. In `post_content` stehen eckige Klammern als `&#91;`/`&#93;`. |
+| **Fremde Shortcodes:** Text wie `[shortcode]` im Quellinhalt würde bei normaler Ausgabe von der eigenen Seite ausgeführt. Ein Autor der Quelle könnte so lokale Shortcodes auslösen. | Das rohe HTML der Quelle liegt nur in einer Meta-Angabe und durchläuft nie `do_shortcode`. Für die Ausgabe ersetzt das Plugin den Inhalt im `the_content`-Filter mit der **ersten** Priorität durch einen Platzhalter und setzt das Ergebnis der Pipeline mit der **letzten** Priorität ein. Kein anderer Inhaltsfilter (Shortcodes, Markdown-Plugins, wpautop) bekommt den fremden Inhalt zu sehen. In `post_content` stehen eckige Klammern als `&#91;`/`&#93;`. |
 | **Rohes HTML an Stellen, die das Plugin nicht kontrolliert** (Themes, Seitenbaukästen, SEO-Plugins lesen `post_content` direkt; Ausgabe bei deaktiviertem Plugin) | `post_content` enthält nur die **beim Import gereinigte** Fassung, `post_excerpt` reinen Text. Das rohe HTML steht ausschließlich in der Meta-Angabe und wird nur durch die Pipeline ausgegeben. Diese Meta-Angabe ist geschützt (Unterstrich-Präfix), also weder in der REST API noch in den Benutzerfeldern sichtbar. |
 | **Unbemerktes Verändern** fremden Inhalts unter eigenem Namen | Bearbeiten und Löschen von Kapseln und ihren Bild-Anhängen sind über `map_meta_cap` für **alle** Benutzer gesperrt. Änderungen kommen nur aus der Synchronisation, die mit den Regeln der Admin-Seite arbeitet. |
 | **Fremde Daten in Titel, Auszug, Slug, Autorname, Bildangaben.** Themes geben Titel, Auszüge und Autorennamen meist ohne Maskierung aus, weil WordPress dort HTML erlaubt. | Titel, Auszug und Autorname werden in reinen Text umgewandelt und **maskiert** gespeichert bzw. ausgegeben. Ein `&lt;script&gt;` im Titel der Quelle bleibt so Text. Slugs laufen über `sanitize_title`. Bild-URLs werden wie alle URLs geprüft (nur https). Größenangaben werden als Zahlen gespeichert. |
@@ -137,6 +137,21 @@ Importierte Beiträge sind echte WordPress-Beiträge. Sie sind damit für alle T
 | **Doppelter Inhalt für Suchmaschinen** | Die Einzelansicht einer Kapsel setzt `rel="canonical"` auf den Originalbeitrag. |
 | **Fremde Autoren als lokale Benutzer** | Es werden nie Benutzer angelegt. Ohne Übersteuerung erscheint der Name des Originalautors nur als Text. Das Autoren-Archiv verweist dann auf den Beitrag selbst. |
 | **Zielkategorien und Schlagwörter auf Anweisung der Quelle** | Welche lokalen Begriffe entstehen, bestimmen ausschließlich die Import-Regeln eines Administrators. Kategorien und Schlagwörter der Quelle selbst werden nicht übernommen. |
+
+### 8. Galerie-Adapter (Share-one-Drive)
+
+Galerien des Plugins „Share-one-Drive“ laden ihre Bilder nur per Skript und AJAX. Statt fremde Skripte auszuführen, holt das Plugin die Galerie-**Daten** selbst und baut die Galerie mit eigenem Code.
+
+| Bedrohung | Gegenmaßnahme |
+| --- | --- |
+| **Offenes Relay über den öffentlichen Galerie-Endpunkt** (`/wp-json/kornsw-remotearticles/v1/gallery`) | Der Endpunkt bedient nur Anfragen, deren Parameter die eigene Seite beim Ausgeben des Platzhalters **mit HMAC signiert** hat. Der Schlüssel wird aus den WordPress-Salts abgeleitet, verglichen wird mit `hash_equals`. Ziel ist immer die konfigurierte Quelle, nie eine frei angegebene Adresse. |
+| **Manipulierte Galerie-Parameter** aus dem Quellinhalt | Token, Konto-, Laufwerks- und Ordner-ID, Pfad und Sortierung werden mit strengen Mustern geprüft, beim Ausgeben und nach dem Signieren erneut. Sie gehen nur als Formularfelder an `admin-ajax.php` der Quelle, mit der festen Aktion `shareonedrive-get-gallery`. |
+| **Anfragen an fremde Ziele** | Der Server liest nur Seiten auf dem Host der Quelle (für die anonyme Galerie-Nonce) und postet nur an `admin-ajax.php` der Quelle. Hinterlegte Zugangsdaten werden dabei nie mitgeschickt. |
+| **Fremdes Markup und Skripte aus der Galerie-Antwort** | Aus der Antwort werden nur Daten übernommen: Typ, Titel als Text, URLs und Maße. Bild-URLs müssen https auf Microsoft-Medienhosts sein (`*.svc.ms`, `*.microsoftpersonalcontent.com`, `*.sharepoint.com`, `*.1drv.com`, `*.onedrive.com`, `*.live.com`). Video-Streams müssen die Aktion `shareonedrive-stream` der Quelle sein. Sie werden serverseitig ohne Referer zu ihrer Microsoft-Adresse aufgelöst, und auch diese wird gegen die Host-Liste geprüft. |
+| **Einschleusen über das Galerie-Skript** | `assets/gallery.js` baut die Galerie ausschließlich mit DOM-Methoden (kein `innerHTML`) und nimmt nur https-URLs an. |
+| **Datenabfluss an Microsoft** | Vorschaubilder und Lightbox laden mit `referrerpolicy="no-referrer"`. Microsoft erfährt so nicht, auf welcher Seite die Galerie eingebettet ist. |
+
+Die Medien-URLs enthalten Zugriffstoken von Microsoft, die nach einigen Stunden ablaufen. Galerien werden deshalb nur eine Stunde zwischengespeichert, die Nonce der Quelle sechs Stunden. Wird eine Nonce abgelehnt, wird sie einmal erneuert.
 
 ## Privatsphäre
 

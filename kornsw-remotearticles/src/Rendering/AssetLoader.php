@@ -14,6 +14,7 @@ final class AssetLoader {
 
   public const STYLE_HANDLE = 'kornsw-remotearticles';
   public const LIGHTBOX_HANDLE = 'kornsw-remotearticles-lightbox';
+  public const GALLERY_HANDLE = 'kornsw-remotearticles-gallery';
 
   /** @var array<string, bool> Aliases whose custom CSS was already added. */
   private array $aliasesWithCustomCss = [];
@@ -45,6 +46,16 @@ final class AssetLoader {
   }
 
   /**
+   * Enqueues the gallery script and styles (galleries loaded asynchronously, opened in the lightbox).
+   */
+  public function enqueueGallery(): void {
+    $this->registerAssets();
+    wp_enqueue_style(self::GALLERY_HANDLE);
+    wp_enqueue_style(self::LIGHTBOX_HANDLE);
+    wp_enqueue_script(self::GALLERY_HANDLE);
+  }
+
+  /**
    * Registers the assets once. Without the default style sheet, the style handle carries only custom CSS.
    */
   private function registerAssets(): void {
@@ -62,6 +73,14 @@ final class AssetLoader {
       self::LIGHTBOX_HANDLE,
       KORNSW_RA_URL . 'assets/lightbox.js',
       [],
+      KORNSW_RA_VERSION,
+      ['in_footer' => true, 'strategy' => 'defer']
+    );
+    wp_register_style(self::GALLERY_HANDLE, KORNSW_RA_URL . 'assets/gallery.css', [], KORNSW_RA_VERSION);
+    wp_register_script(
+      self::GALLERY_HANDLE,
+      KORNSW_RA_URL . 'assets/gallery.js',
+      [self::LIGHTBOX_HANDLE],
       KORNSW_RA_VERSION,
       ['in_footer' => true, 'strategy' => 'defer']
     );

@@ -83,7 +83,7 @@ Synchronizer ── ImportRuleParser („rezepte, #backen > Kochen, #familie“)
         ▼
 CapsuleStore ── Beitrag (post) + Bild-Anhang ohne Datei
 
-Ausgabe: CapsulePresenter ── the_content (Platzhalter vor do_shortcode, Pipeline-Ergebnis am Ende),
+Ausgabe: CapsulePresenter ── the_content (Platzhalter mit erster Priorität, Pipeline-Ergebnis mit letzter),
                              Bildgrößen der Quelle, Autorname, Canonical, Bearbeitungssperre
 ```
 
@@ -97,6 +97,34 @@ Ausgabe: CapsulePresenter ── the_content (Platzhalter vor do_shortcode, Pipe
 | `CapsulePresenter` | Lässt Kapseln wie eigene Beiträge wirken und sperrt Bearbeiten und Löschen über `map_meta_cap`. |
 
 Vorschaubilder: Jede Kapsel bekommt einen Anhang ohne lokale Datei. `image_downsize`, `wp_get_attachment_url` und `wp_get_attachment_image_attributes` liefern die passende Bildgröße der Quelle samt `srcset`. In der Mediathek sind diese Anhänge ausgeblendet. Ist das Plugin deaktiviert, zeigt die `guid` des Anhangs weiterhin auf das Originalbild.
+
+## Galerie-Adapter: Share-one-Drive
+
+Galerien des Plugins „Share-one-Drive“ (OneDrive) enthalten im Beitrag nur Platzhalter, ihre Bilder lädt ein Skript per AJAX. Der Adapter ersetzt das, ohne fremde Skripte auszuführen (Sicherheit: [security.md](security.md), Abschnitt 8):
+
+```text
+gereinigter Inhalt ── GalleryPlaceholderInserter: Modul .wpcp-module.ShareoneDrive[data-list=gallery]
+        │                → <div class="kornsw-ra-gallery" data-kornsw-ra-gallery="signierte Endpunkt-URL">
+        ▼
+Browser: assets/gallery.js ── GET /wp-json/kornsw-remotearticles/v1/gallery?d=…&s=…
+        ▼
+ShareOneDriveGalleries ── Signatur prüfen → Zwischenspeicher (1 h)
+        │   gallery_nonce von der Originalseite (6 h)
+        │   POST admin-ajax.php action=shareonedrive-get-gallery (Referer = Originalbeitrag)
+        │   ShareOneDriveResponseParser: nur Daten, Host-Positivliste
+        │   Videos: Stream-URL der Quelle ohne Referer → Microsoft-URL
+        ▼
+JSON → gallery.js baut die Galerie (Blocksatz) → Lightbox (gruppiert je Galerie)
+```
+
+| Klasse (`src/Galleries/…`) | Aufgabe |
+| --- | --- |
+| `ShareOneDriveModule` | Parameter eines Galerie-Moduls, streng geprüft. Ohne WordPress testbar. |
+| `GalleryPlaceholderInserter` | Ersetzt Galerie-Module im gereinigten HTML durch Platzhalter. Ohne WordPress testbar. |
+| `ShareOneDriveResponseParser`, `GalleryItem` | Liest Bilder und Videos aus der Antwort der Quelle. Ohne WordPress testbar. |
+| `ShareOneDriveGalleries` | REST-Endpunkt, Signatur, Nonce, Abruf, Zwischenspeicher, Auflösen der Videos. Eingebunden in Shortcode-Ausgabe und Kapseln. |
+
+Andere Module von Share-one-Drive, etwa Dateilisten oder Player, bleiben ohne Skript unsichtbar.
 
 ## Datenhaltung
 
