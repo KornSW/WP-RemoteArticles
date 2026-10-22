@@ -1,13 +1,13 @@
 {
-  "currentVersionWithSuffix": "1.0.0",
+  "currentVersionWithSuffix": "1.0.1",
   "releaseType": "",
-  "currentVersion": "1.0.0",
+  "currentVersion": "1.0.1",
   "currentMajor": 1,
   "currentMinor": 0,
-  "currentFix": 0,
-  "previousVersion": "0.0.0",
-  "changeGrade": "initial",
-  "versionTimeInfo": "11:42:55",
+  "currentFix": 1,
+  "previousVersion": "1.0.0",
+  "changeGrade": "fix",
+  "versionTimeInfo": "11:45:48",
   "versionDateInfo": "2026-10-22",
-  "versionNotes": "- moved **MVP** from internal Repo to here...\n"
+  "versionNotes": "- Merge branch 'master' of https://github.com/KornSW/WP-RemoteArticles\n- nachtrag\n"
 }

@@ -1,14 +1,14 @@
 {
   "name": "KornSW RemoteArticles",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "KornSW",
   "homepage": "https://github.com/KornSW/WP-RemoteArticles",
-  "download_url": "https://github.com/KornSW/WP-RemoteArticles/releases/download/v1.0.0/kornsw-remotearticles.zip",
+  "download_url": "https://github.com/KornSW/WP-RemoteArticles/releases/download/v1.0.1/kornsw-remotearticles.zip",
   "requires": "7.1",
   "requires_php": "8.5",
   "tested": "",
   "sections": {
     "description": "Bettet die Beiträge einer Kategorie aus einer fremden WordPress-Installation per Shortcode ein – mit Galerien, Link-Regelwerk und anpassbarem Styling.",
-    "changelog": "<h4>Version 1.0.0</h4><ul><li>moved **MVP** from internal Repo to here...</li></ul>"
+    "changelog": "<h4>Version 1.0.1</h4><ul><li>Merge branch &#x27;master&#x27; of https://github.com/KornSW/WP-RemoteArticles</li><li>nachtrag</li></ul>"
   }
 }
