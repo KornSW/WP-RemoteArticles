@@ -1,0 +1,43 @@
+/* KornSW RemoteArticles - default style sheet (can be disabled in Settings > Remote Articles). */
+
+.kornsw-ra {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5em;
+}
+
+.kornsw-ra-article {
+  min-width: 0;
+}
+
+.kornsw-ra-title {
+  margin-bottom: 0.25em;
+}
+
+.kornsw-ra-meta {
+  margin-top: 0;
+  font-size: 0.875em;
+  opacity: 0.7;
+}
+
+.kornsw-ra-image {
+  margin: 0 0 1em;
+}
+
+.kornsw-ra-image img,
+.kornsw-ra-content img,
+.kornsw-ra-content video {
+  max-width: 100%;
+  height: auto;
+}
+
+.kornsw-ra-content iframe {
+  max-width: 100%;
+}
+
+.kornsw-ra-error {
+  padding: 0.75em 1em;
+  border-left: 4px solid #d63638;
+  background: #fcf0f1;
+  color: #1d2327;
+}

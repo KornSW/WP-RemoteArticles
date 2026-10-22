@@ -1,0 +1,67 @@
+/* KornSW RemoteArticles - lightbox for images and videos of embedded posts. */
+
+.kornsw-ra-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.92);
+}
+
+.kornsw-ra-lightbox[hidden] {
+  display: none;
+}
+
+.kornsw-ra-lightbox-media {
+  max-width: 94vw;
+  max-height: 88vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.kornsw-ra-lightbox-button {
+  position: absolute;
+  border: 0;
+  border-radius: 4px;
+  padding: 0.4em 0.7em;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.kornsw-ra-lightbox-button:hover,
+.kornsw-ra-lightbox-button:focus-visible {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.kornsw-ra-lightbox-close {
+  top: 16px;
+  right: 16px;
+}
+
+.kornsw-ra-lightbox-previous {
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.kornsw-ra-lightbox-next {
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.kornsw-ra-lightbox-counter {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-size: 0.875rem;
+  opacity: 0.8;
+}

@@ -1,0 +1,10 @@
+{
+  "name": "kornsw-remotearticles-php-wasm",
+  "private": true,
+  "description": "Runs the standalone PHP tests with PHP 8.5 compiled to WebAssembly.",
+  "type": "module",
+  "dependencies": {
+    "@php-wasm/node": "*",
+    "@php-wasm/universal": "*"
+  }
+}

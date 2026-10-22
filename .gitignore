@@ -1,0 +1,5 @@
+dist/
+__pycache__/
+*.pyc
+tests/php-wasm/node_modules/
+tests/php-wasm/package-lock.json
