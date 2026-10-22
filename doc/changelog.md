@@ -4,6 +4,11 @@
 
 *(none)*
 
+## v 1.0.6
+released **2026-10-22**, including:
+ - fix
+
+
 ## v 1.0.5
 released **2026-10-22**, including:
  - Fix für gallery
