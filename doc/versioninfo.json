@@ -1,13 +1,13 @@
 {
-  "currentVersionWithSuffix": "1.0.2",
+  "currentVersionWithSuffix": "1.0.3",
   "releaseType": "",
-  "currentVersion": "1.0.2",
+  "currentVersion": "1.0.3",
   "currentMajor": 1,
   "currentMinor": 0,
-  "currentFix": 2,
-  "previousVersion": "1.0.1",
+  "currentFix": 3,
+  "previousVersion": "1.0.2",
   "changeGrade": "fix",
-  "versionTimeInfo": "12:29:38",
+  "versionTimeInfo": "12:36:50",
   "versionDateInfo": "2026-10-22",
-  "versionNotes": "- Merge branch 'master' of https://github.com/KornSW/WP-RemoteArticles\n- import-feature\n"
+  "versionNotes": "- Merge branch 'master' of https://github.com/KornSW/WP-RemoteArticles\n- php version\n"
 }
