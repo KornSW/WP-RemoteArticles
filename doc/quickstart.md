@@ -40,6 +40,30 @@ Beispiel: die fünf neuesten Beiträge als Auszug mit Bild, Links auf die Quelle
 [remote_articles alias="blog" category="rezepte" count="5" display="excerpt" image="yes" links="remove"]
 ```
 
+## Beiträge importieren und mit eigenen mischen
+
+Statt per Shortcode lassen sich Beiträge einer Quelle als normale Beiträge dieser Seite übernehmen. Sie erscheinen dann gemischt mit den eigenen Beiträgen in Kategorie- und Schlagwort-Archiven, auf der Startseite, in Widgets, Feeds und der Suche. Ein Klick öffnet sie auf dieser Seite.
+
+1. Quelle bearbeiten und im Feld **Import** eine Regel pro Zeile eintragen:
+
+   ```text
+   rezepte, backen > Kochen
+   #reise > Unterwegs, #urlaub
+   ```
+
+   Links stehen Kategorien der Quelle (Slug oder ID), rechts lokale Kategorien. Schlagwörter werden mit `#` gekennzeichnet. Fehlende lokale Kategorien und Schlagwörter werden automatisch angelegt.
+2. Optional einen **Autor** wählen. Ohne Auswahl erscheint der Name des Originalautors.
+3. **Synchronisation** alle *x* Stunden einstellen (Standard 4) und speichern. Beim Speichern prüft das Plugin, ob die Kategorien der Quelle existieren.
+4. In der Liste **Jetzt synchronisieren** klicken. Große Kategorien werden in mehreren Durchgängen übernommen, die neuesten zuerst. Die weiteren Durchgänge starten automatisch im Hintergrund.
+
+Wichtig zu wissen:
+
+- Importierte Beiträge sind in der Beitragsliste mit „Importiert von …“ markiert und **nicht bearbeitbar**. Änderungen an der Quelle kommen mit der nächsten Synchronisation.
+- Wird ein Beitrag an der Quelle gelöscht oder passt er zu keiner Regel mehr, wird er hier ebenfalls entfernt. Löscht man die Quelle, verschwinden auch ihre importierten Beiträge.
+- Suchmaschinen erhalten über `rel="canonical"` den Hinweis auf das Original.
+- Plugins, die beim Veröffentlichen neuer Beiträge automatisch etwas tun (z. B. Newsletter oder Social-Media-Posts), behandeln importierte Beiträge wie eigene. Das vor dem ersten Import prüfen.
+- WP-Cron läuft nur bei Seitenaufrufen. Auf wenig besuchten Seiten startet die Synchronisation deshalb später; für pünktliche Läufe einen System-Cron einrichten, der `wp-cron.php` regelmäßig aufruft.
+
 ## Darstellung anpassen
 
 - Die Ausgabe trägt die Klassen `.kornsw-ra`, `.kornsw-ra-article`, `.kornsw-ra-image`, `.kornsw-ra-title`, `.kornsw-ra-meta` und `.kornsw-ra-content`.

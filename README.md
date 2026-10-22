@@ -2,7 +2,7 @@
 
 WordPress-Plugin, das die Beiträge einer Kategorie aus einer fremden WordPress-Installation per Shortcode in die eigene Seite einbettet. Geladen wird über die offizielle WordPress REST API der Quelle. Shortcodes und Galerien der Quellbeiträge funktionieren eingebettet weiter, und Links auf die Quellseite werden nach einem einstellbaren Regelwerk behandelt.
 
-Status: MVP – Quellenverwaltung, Shortcode, sichere Einbettung mit eigener Lightbox. Siehe [Schnellstart](doc/quickstart.md).
+Status: MVP – Quellenverwaltung, Shortcode, sichere Einbettung mit eigener Lightbox, Import als lokale Beiträge (gemischt mit eigenen Beiträgen). Siehe [Schnellstart](doc/quickstart.md).
 
 ## Motivation
 

@@ -44,3 +44,10 @@ Findings behind the concept:
 ## Open Questions
 
 Tracked in the epics (section "Offene Fragen"); answers become requirements or `doc/decisions/decision-<title>.md`.
+
+## Import ("capsules"), implemented 2026-10-22
+
+- Decisions and rationale: `doc/epics/epic-import-als-lokale-beitraege.md`; security: `doc/security.md` section 7; structure: `doc/architecture.md`.
+- Invariants that must never be broken: raw foreign HTML only in meta `_kornsw_ra_raw_content` and only output through the pipeline; `post_content` = marker + sanitized fallback with `&#91;`/`&#93;`; content replaced via placeholder at `the_content` priority 9 and rendered at `PHP_INT_MAX` (foreign text never reaches `do_shortcode`); titles, excerpts, author names stored/output escaped; capsules and image capsules locked via `map_meta_cap`; deletion of capsules only after a complete remote listing.
+- Sync limits: 300 details per run, batches of 20, 15 s time budget, follow-up single cron event after 60 s while posts are pending (status `pending` in `kornsw_ra_sync_status`).
+- Verified in WordPress Playground (WP 7.1.3, PHP 8.5) against wordpress.org/news (484 posts): mixing in category archive, local tag, thumbnails with srcset from source sizes, pipeline output, canonical, original author, edit lock, idempotent re-run, removal, shortcode/title/author injection attempts. Playground runs are slow (about 25 s per 50 posts) and can hang; always wrap them in `timeout`. Not verified there: admin page with the new import fields.

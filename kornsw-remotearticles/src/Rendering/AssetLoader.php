@@ -25,13 +25,18 @@ final class AssetLoader {
 
   /**
    * Enqueues the assets for an embedding of the given source (assets enqueued during rendering are printed in the footer).
+   *
+   * @param Source|null $source The source, or null if it is no longer configured (imported posts of a deleted source).
    */
-  public function enqueueFor(Source $source): void {
+  public function enqueueFor(?Source $source): void {
     $this->registerAssets();
     wp_enqueue_style(self::STYLE_HANDLE);
     wp_enqueue_style(self::LIGHTBOX_HANDLE);
     wp_enqueue_script(self::LIGHTBOX_HANDLE);
 
+    if ($source === null) {
+      return;
+    }
     if ($source->customCss !== '' && !isset($this->aliasesWithCustomCss[$source->alias])) {
       // Custom CSS is entered by administrators; "<" is removed so that it cannot close the style element.
       wp_add_inline_style(self::STYLE_HANDLE, str_replace('<', '', $source->customCss));

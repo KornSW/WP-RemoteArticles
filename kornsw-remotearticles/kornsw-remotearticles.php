@@ -43,4 +43,5 @@ spl_autoload_register(function (string $className): void {
 });
 
 register_activation_hook(__FILE__, [\KornSW\RemoteArticles\Plugin::class, 'activate']);
+register_deactivation_hook(__FILE__, [\KornSW\RemoteArticles\Plugin::class, 'deactivate']);
 add_action('plugins_loaded', [\KornSW\RemoteArticles\Plugin::class, 'boot']);

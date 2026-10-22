@@ -10,5 +10,6 @@ require __DIR__ . '/helpers.php';
 require __DIR__ . '/security-tests.php';
 require __DIR__ . '/embedding-tests.php';
 require __DIR__ . '/shortcode-tests.php';
+require __DIR__ . '/import-rule-tests.php';
 
 exit(TestRun::finish());

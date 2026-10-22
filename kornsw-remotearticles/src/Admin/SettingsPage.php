@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace KornSW\RemoteArticles\Admin;
 
 use KornSW\RemoteArticles\Embedding\LinkMode;
+use KornSW\RemoteArticles\Import\CapsuleStore;
+use KornSW\RemoteArticles\Import\ImportRuleParser;
+use KornSW\RemoteArticles\Import\Synchronizer;
+use KornSW\RemoteArticles\Import\SyncStatusRepository;
 use KornSW\RemoteArticles\Remote\RemoteClient;
 use KornSW\RemoteArticles\Remote\RemoteException;
 use KornSW\RemoteArticles\Settings;
@@ -29,16 +33,23 @@ final class SettingsPage {
   private const ACTION_DELETE_SOURCE = 'kornsw_ra_delete_source';
   private const ACTION_TEST_SOURCE = 'kornsw_ra_test_source';
   private const ACTION_SAVE_SETTINGS = 'kornsw_ra_save_settings';
+  private const ACTION_SYNC_SOURCE = 'kornsw_ra_sync_source';
 
   private const NOTICE_TRANSIENT_PREFIX = 'kornsw_ra_notice_';
   private const MAXIMUM_CACHE_MINUTES = 1440;
   private const MAXIMUM_CUSTOM_CSS_LENGTH = 20000;
+  private const MAXIMUM_IMPORT_RULES_LENGTH = 5000;
+  private const MAXIMUM_SYNC_INTERVAL_HOURS = 168;
 
   public function __construct(
     private readonly SourceRepository $sourceRepository,
     private readonly Settings $settings,
     private readonly SecretBox $secretBox,
-    private readonly RemoteClient $remoteClient
+    private readonly RemoteClient $remoteClient,
+    private readonly ImportRuleParser $importRuleParser,
+    private readonly Synchronizer $synchronizer,
+    private readonly CapsuleStore $capsuleStore,
+    private readonly SyncStatusRepository $syncStatusRepository
   ) {
   }
 
@@ -51,6 +62,7 @@ final class SettingsPage {
     add_action('admin_post_' . self::ACTION_DELETE_SOURCE, [$this, 'handleDeleteSource']);
     add_action('admin_post_' . self::ACTION_TEST_SOURCE, [$this, 'handleTestSource']);
     add_action('admin_post_' . self::ACTION_SAVE_SETTINGS, [$this, 'handleSaveSettings']);
+    add_action('admin_post_' . self::ACTION_SYNC_SOURCE, [$this, 'handleSyncSource']);
   }
 
   /**
@@ -105,26 +117,80 @@ final class SettingsPage {
     $cacheMinutes = max(0, min(self::MAXIMUM_CACHE_MINUTES, (int)($_POST['cache_minutes'] ?? 15)));
     $customCss = substr(str_replace('<', '', wp_unslash((string)($_POST['custom_css'] ?? ''))), 0, self::MAXIMUM_CUSTOM_CSS_LENGTH);
 
-    $this->sourceRepository->save(new Source(
+    // Not sanitize_textarea_field(): it removes "%xx" sequences of encoded slugs. The parser accepts only safe characters.
+    $importRules = substr(trim(wp_unslash((string)($_POST['import_rules'] ?? ''))), 0, self::MAXIMUM_IMPORT_RULES_LENGTH);
+    try {
+      $rules = $this->importRuleParser->parse($importRules);
+    } catch (\InvalidArgumentException $exception) {
+      $this->redirectWithNotice('error', $exception->getMessage() . ' Die Quelle wurde nicht gespeichert.');
+    }
+
+    $importAuthorId = max(0, (int)($_POST['import_author_id'] ?? 0));
+    if ($importAuthorId > 0 && get_userdata($importAuthorId) === false) {
+      $importAuthorId = 0;
+    }
+    $syncIntervalHours = max(1, min(self::MAXIMUM_SYNC_INTERVAL_HOURS, (int)($_POST['sync_interval_hours'] ?? Source::DEFAULT_SYNC_INTERVAL_HOURS)));
+
+    $source = new Source(
       $alias,
       $baseUrl,
       $userName,
       $encryptedPassword,
       $linkMode,
       $cacheMinutes * 60,
-      $customCss
-    ));
-    $this->redirectWithNotice('success', sprintf('Die Quelle „%s“ wurde gespeichert.', $alias));
+      $customCss,
+      $importRules,
+      $importAuthorId,
+      $syncIntervalHours
+    );
+    $this->sourceRepository->save($source);
+
+    // The remote categories and tags of the rules are checked right away, so that typos show up immediately.
+    try {
+      foreach ($rules as $rule) {
+        foreach ($rule->remoteTerms as $remoteTerm) {
+          $this->synchronizer->resolveRemoteTermId($source, $remoteTerm);
+        }
+      }
+    } catch (RemoteException $exception) {
+      $this->redirectWithNotice('error', sprintf('Die Quelle „%s“ wurde gespeichert, aber die Import-Regeln sind nicht ausführbar: %s', $alias, $exception->getMessage()));
+    }
+
+    $message = sprintf('Die Quelle „%s“ wurde gespeichert.', $alias);
+    if (count($rules) > 0) {
+      $message .= ' Die Import-Regeln wurden geprüft; mit „Jetzt synchronisieren“ werden die Beiträge sofort übernommen.';
+    }
+    $this->redirectWithNotice('success', $message);
   }
 
   /**
-   * Deletes a source.
+   * Deletes a source together with its imported posts.
    */
   public function handleDeleteSource(): void {
     $this->verifyRequest(self::ACTION_DELETE_SOURCE);
     $alias = sanitize_key(wp_unslash((string)($_POST['alias'] ?? '')));
+    $deletedCapsuleCount = $this->capsuleStore->deleteAllForAlias($alias);
+    $this->syncStatusRepository->delete($alias);
     $this->sourceRepository->delete($alias);
-    $this->redirectWithNotice('success', sprintf('Die Quelle „%s“ wurde gelöscht.', $alias));
+    $this->redirectWithNotice('success', sprintf('Die Quelle „%s“ wurde gelöscht, ebenso %d importierte Beiträge.', $alias, $deletedCapsuleCount));
+  }
+
+  /**
+   * Synchronizes the import of a source immediately.
+   */
+  public function handleSyncSource(): void {
+    $this->verifyRequest(self::ACTION_SYNC_SOURCE);
+    $alias = sanitize_key(wp_unslash((string)($_POST['alias'] ?? '')));
+    $source = $this->sourceRepository->find($alias);
+    if ($source === null) {
+      $this->redirectWithNotice('error', sprintf('Die Quelle „%s“ gibt es nicht.', $alias));
+    }
+
+    $result = $this->synchronizer->synchronize($source);
+    if ($result['success']) {
+      $this->redirectWithNotice('success', sprintf('Synchronisation „%s“: %s', $alias, $result['message']));
+    }
+    $this->redirectWithNotice('error', sprintf('Synchronisation „%s“ fehlgeschlagen: %s', $alias, $result['message']));
   }
 
   /**
@@ -192,7 +258,7 @@ final class SettingsPage {
     }
 
     echo '<table class="widefat striped"><thead><tr>';
-    echo '<th>Alias</th><th>Adresse</th><th>Zugangsdaten</th><th>Links auf die Quelle</th><th>Zwischenspeicher</th><th>Aktionen</th>';
+    echo '<th>Alias</th><th>Adresse</th><th>Zugangsdaten</th><th>Links auf die Quelle</th><th>Zwischenspeicher</th><th>Import</th><th>Aktionen</th>';
     echo '</tr></thead><tbody>';
     foreach ($sources as $source) {
       $credentialsLabel = 'keine (öffentlich)';
@@ -207,18 +273,48 @@ final class SettingsPage {
       echo '<td>' . esc_html($source->linkMode->getLabel()) . '</td>';
       echo '<td>' . esc_html((string)intdiv($source->cacheTtlSeconds, 60)) . ' Min.</td>';
       echo '<td>';
+      $this->renderImportStatus($source);
+      echo '</td>';
+      echo '<td>';
       echo '<a class="button" href="' . esc_url($this->getPageUrl(['edit' => $source->alias])) . '">Bearbeiten</a> ';
       $this->renderActionButton(self::ACTION_TEST_SOURCE, $source->alias, 'Verbindung testen', '');
+      if ($source->hasImportRules()) {
+        $this->renderActionButton(self::ACTION_SYNC_SOURCE, $source->alias, 'Jetzt synchronisieren', '');
+      }
       $this->renderActionButton(
         self::ACTION_DELETE_SOURCE,
         $source->alias,
         'Löschen',
-        sprintf('Quelle „%s“ wirklich löschen? Seiten, die sie verwenden, zeigen danach nichts mehr an.', $source->alias)
+        sprintf('Quelle „%s“ wirklich löschen? Ihre importierten Beiträge werden ebenfalls gelöscht, und Seiten, die sie per Shortcode verwenden, zeigen danach nichts mehr an.', $source->alias)
       );
       echo '</td>';
       echo '</tr>';
     }
     echo '</tbody></table>';
+  }
+
+  /**
+   * Shows whether a source is imported and the result of its last synchronization.
+   */
+  private function renderImportStatus(Source $source): void {
+    if (!$source->hasImportRules()) {
+      echo 'kein Import';
+      return;
+    }
+
+    echo esc_html(sprintf('alle %d Std.', $source->syncIntervalHours));
+    $status = $this->syncStatusRepository->find($source->alias);
+    if ($status === null) {
+      echo '<br>noch nicht synchronisiert';
+      return;
+    }
+
+    $timeLabel = wp_date((string)get_option('date_format') . ' ' . (string)get_option('time_format'), $status['time']);
+    $statusColor = '#00a32a';
+    if (!$status['success']) {
+      $statusColor = '#d63638';
+    }
+    echo '<br><span style="color:' . esc_attr($statusColor) . '">' . esc_html((string)$timeLabel) . ': ' . esc_html($status['message']) . '</span>';
   }
 
   /**
@@ -248,6 +344,9 @@ final class SettingsPage {
     $linkMode = LinkMode::NewWindow;
     $cacheMinutes = 15;
     $customCss = '';
+    $importRules = '';
+    $importAuthorId = 0;
+    $syncIntervalHours = Source::DEFAULT_SYNC_INTERVAL_HOURS;
     if ($source !== null) {
       $alias = $source->alias;
       $baseUrl = $source->baseUrl;
@@ -255,6 +354,9 @@ final class SettingsPage {
       $linkMode = $source->linkMode;
       $cacheMinutes = intdiv($source->cacheTtlSeconds, 60);
       $customCss = $source->customCss;
+      $importRules = $source->importRules;
+      $importAuthorId = $source->importAuthorId;
+      $syncIntervalHours = $source->syncIntervalHours;
     }
 
     if ($isEdit) {
@@ -321,6 +423,27 @@ final class SettingsPage {
     echo '<p class="description">Wird auf Seiten mit Beiträgen dieser Quelle geladen. Klassen: <code>.kornsw-ra</code>, <code>.kornsw-ra-article</code>, <code>.kornsw-ra-title</code>, <code>.kornsw-ra-meta</code>, <code>.kornsw-ra-content</code>.</p>';
     echo '</td></tr>';
 
+    echo '<tr><th scope="row"><label for="kornsw-ra-import-rules">Import (optional)</label></th><td>';
+    echo '<textarea id="kornsw-ra-import-rules" name="import_rules" class="large-text code" rows="4" placeholder="rezepte, backen &gt; Kochen">' . esc_textarea($importRules) . '</textarea>';
+    echo '<p class="description">Übernimmt Beiträge der Quelle als nicht bearbeitbare Beiträge dieser Seite. Sie erscheinen gemischt mit den eigenen Beiträgen in Archiven, auf der Startseite, in Widgets und in der Suche und öffnen sich hier. Eine Regel pro Zeile: <code>Kategorien der Quelle &gt; lokale Kategorien</code>. Mehrere Einträge durch Komma trennen, Schlagwörter mit <code>#</code> kennzeichnen, z. B. <code>rezepte, #backen &gt; Kochen, #familie</code>. Links stehen Slug oder ID der Quelle, rechts Namen lokaler Kategorien bzw. Schlagwörter (werden bei Bedarf angelegt).</p>';
+    echo '</td></tr>';
+
+    echo '<tr><th scope="row"><label for="kornsw-ra-import-author">Autor importierter Beiträge</label></th><td>';
+    wp_dropdown_users([
+      'name' => 'import_author_id',
+      'id' => 'kornsw-ra-import-author',
+      'selected' => $importAuthorId,
+      'show_option_none' => 'Originalautor der Quelle (nur Name)',
+      'option_none_value' => '0',
+      'capability' => ['edit_posts'],
+    ]);
+    echo '</td></tr>';
+
+    echo '<tr><th scope="row"><label for="kornsw-ra-sync-interval">Synchronisation</label></th><td>';
+    echo 'alle <input type="number" id="kornsw-ra-sync-interval" name="sync_interval_hours" min="1" max="' . esc_attr((string)self::MAXIMUM_SYNC_INTERVAL_HOURS) . '" value="' . esc_attr((string)$syncIntervalHours) . '" style="width:5em"> Stunden';
+    echo '<p class="description">Zusätzlich jederzeit mit „Jetzt synchronisieren“ in der Liste oben.</p>';
+    echo '</td></tr>';
+
     echo '</tbody></table>';
     submit_button('Quelle speichern');
     if ($isEdit) {
@@ -344,6 +467,7 @@ final class SettingsPage {
     echo '<tr><td><code>image</code></td><td><code>yes</code> = Beitragsbild anzeigen</td></tr>';
     echo '<tr><td><code>links</code></td><td><code>remove</code>, <code>new_window</code> oder <code>keep</code> – überschreibt die Einstellung der Quelle</td></tr>';
     echo '</tbody></table>';
+    echo '<p>Alternativ ohne Shortcode: Mit den Import-Regeln einer Quelle erscheinen deren Beiträge als normale Beiträge in den gewählten Kategorien und Schlagwörtern dieser Seite.</p>';
   }
 
   /**

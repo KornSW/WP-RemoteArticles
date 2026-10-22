@@ -32,7 +32,7 @@ Die Anforderungen sind nach Epics geschnitten. Details, Varianten und offene Fra
 | A2 | Shortcodes, Galerien und Skripte der Quellbeiträge funktionieren eingebettet so weit wie möglich weiter: über die Einbettungs-Pipeline mit Reinigung, URL-Umschreibung und Vertrauensstufen je Quelle. | [Einbettungs-Pipeline](epics/epic-einbettungs-pipeline.md) | Stufe 1 im MVP umgesetzt (ohne fremde Skripte, eigene Lightbox) |
 | A3 | Links auf die Quellseite werden je nach Einstellung entfernt, in einem neuen Fenster auf der Originalseite geöffnet oder unverändert gelassen. | [Link-Regelwerk](epics/epic-link-regelwerk.md) | umgesetzt im MVP (Standard: neues Fenster) |
 | A4 | Das Styling der eingebetteten Beiträge ist anpassbar. | [Styling-Anpassungen](epics/epic-styling-anpassungen.md) | Grundstufe im MVP (CSS-Klassen, Standard-Stylesheet abschaltbar, eigenes CSS je Quelle) |
-| A5 | Beiträge ausgewählter Kategorien einer Quelle werden über Import-Regeln je Quelle (`RemoteKat1, RemoteKat2 > LokaleKat`) als nicht bearbeitbare lokale Beiträge gehalten und mischen sich so mit den eigenen Beiträgen (Archive, Startseite, Widgets, Feeds, Suche). Schlüssel `<alias>:<ID auf der Quelle>`. | [Import als lokale Beiträge](epics/epic-import-als-lokale-beitraege.md) | zur Bestätigung |
+| A5 | Beiträge ausgewählter Kategorien einer Quelle werden über Import-Regeln je Quelle (`RemoteKat1, RemoteKat2 > LokaleKat`) als nicht bearbeitbare lokale Beiträge gehalten und mischen sich so mit den eigenen Beiträgen (Kategorie- und Schlagwort-Archive, Startseite, Widgets, Feeds, Suche); ein Klick öffnet die lokale Einzelansicht. Schlüssel `<alias>:<ID auf der Quelle>`. | [Import als lokale Beiträge](epics/epic-import-als-lokale-beitraege.md) | umgesetzt (22.10.2026) |
 
 Bewusst **später** (nicht Teil des ersten Ausbaus):
 
@@ -47,4 +47,4 @@ Bewusst **später** (nicht Teil des ersten Ausbaus):
 ## Abgrenzung
 
 - Kein Schreiben auf der Quellseite.
-- Der Shortcode bettet live ein (mit Zwischenspeicher). Lokale Kopien entstehen nur über den Import (A5, zur Bestätigung). Sie sind nie bearbeitbar und spiegeln immer die Quelle.
+- Der Shortcode bettet live ein (mit Zwischenspeicher). Lokale Kopien entstehen nur über den Import (A5). Sie sind nie bearbeitbar und spiegeln immer die Quelle.

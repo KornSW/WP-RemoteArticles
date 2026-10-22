@@ -1,6 +1,6 @@
 # Sicherheit
 
-Stand: 22.10.2026. Umgesetzt (MVP): Abschnitte 1, 2 und 6 sowie die Standardstufe „nicht vertrauenswürdig“, abgesichert durch `tests/run-tests.php`. Die Abschnitte 3 bis 5 betreffen die Stufe „vertrauenswürdig“, die noch nicht gebaut ist. Dieses Dokument ist verbindlich. Jede Implementierung der [Einbettungs-Pipeline](epics/epic-einbettungs-pipeline.md) muss die hier festgelegten Schutzmaßnahmen umsetzen. Wird eine davon aufgeweicht, muss dieses Dokument vorher angepasst und die Änderung begründet werden.
+Stand: 22.10.2026. Umgesetzt: Abschnitte 1, 2, 6 und 7 sowie die Standardstufe „nicht vertrauenswürdig“, abgesichert durch `tests/run-tests.php`. Die Abschnitte 3 bis 5 betreffen die Stufe „vertrauenswürdig“, die noch nicht gebaut ist. Dieses Dokument ist verbindlich. Jede Implementierung der [Einbettungs-Pipeline](epics/epic-einbettungs-pipeline.md) muss die hier festgelegten Schutzmaßnahmen umsetzen. Wird eine davon aufgeweicht, muss dieses Dokument vorher angepasst und die Änderung begründet werden.
 
 ## Worum es geht
 
@@ -119,8 +119,24 @@ Gemeint sind REST-Routen, AJAX-Aktionen und Dateien, die es lokal nicht gibt und
 | --- | --- |
 | Unbefugtes Ändern von Quellen und Vertrauensstufen | Nur mit `manage_options`, jede Änderung mit Nonce-Prüfung. |
 | Auslesen der Zugangsdaten | Gespeichert verschlüsselt (libsodium, Schlüssel aus den WordPress-Salts). Sie werden nie zurück ins Formular geschrieben, nie geloggt und erscheinen in keiner Fehlermeldung. Ein leeres Feld behält den gespeicherten Wert. |
-| Manipulierte Zwischenspeicher-Inhalte | Der Zwischenspeicher liegt in der Datenbank (Transients/Optionen), nicht als öffentlich abrufbare Datei. Gespeicherte Inhalte gelten weiterhin als fremd und werden vor der Ausgabe nach dem aktuellen Regelstand gereinigt. Eine neue Reinigungsversion macht alte Einträge ungültig. |
+| Manipulierte Zwischenspeicher-Inhalte | Der Zwischenspeicher liegt in der Datenbank (Transients/Optionen), nicht als öffentlich abrufbare Datei. Gespeicherte Inhalte gelten weiterhin als fremd und werden bei **jeder** Ausgabe nach dem aktuellen Regelstand gereinigt. Verbesserungen der Reinigung wirken deshalb sofort auch für ältere Einträge. |
 | Informationen in Fehlermeldungen | Besucher sehen keine technischen Details. Ausführliche Fehler nur für Benutzer mit `manage_options`. |
+
+### 7. Import als lokale Beiträge („Kapseln“)
+
+Importierte Beiträge sind echte WordPress-Beiträge. Sie sind damit für alle Themes, Plugins, Feeds und die REST API der eigenen Seite sichtbar. Fremder Inhalt gelangt so an Stellen, die das Plugin nicht selbst ausgibt.
+
+| Bedrohung | Gegenmaßnahme |
+| --- | --- |
+| **Fremde Shortcodes:** Text wie `[shortcode]` im Quellinhalt würde bei normaler Ausgabe von der eigenen Seite ausgeführt. Ein Autor der Quelle könnte so lokale Shortcodes auslösen. | Das rohe HTML der Quelle liegt nur in einer Meta-Angabe und durchläuft nie `do_shortcode`. Für die Ausgabe ersetzt das Plugin den Inhalt im `the_content`-Filter **vor** WordPress' Shortcode-Verarbeitung durch einen Platzhalter und setzt das Ergebnis der Pipeline **nach** allen anderen Filtern ein. In `post_content` stehen eckige Klammern als `&#91;`/`&#93;`. |
+| **Rohes HTML an Stellen, die das Plugin nicht kontrolliert** (Themes, Seitenbaukästen, SEO-Plugins lesen `post_content` direkt; Ausgabe bei deaktiviertem Plugin) | `post_content` enthält nur die **beim Import gereinigte** Fassung, `post_excerpt` reinen Text. Das rohe HTML steht ausschließlich in der Meta-Angabe und wird nur durch die Pipeline ausgegeben. Diese Meta-Angabe ist geschützt (Unterstrich-Präfix), also weder in der REST API noch in den Benutzerfeldern sichtbar. |
+| **Unbemerktes Verändern** fremden Inhalts unter eigenem Namen | Bearbeiten und Löschen von Kapseln und ihren Bild-Anhängen sind über `map_meta_cap` für **alle** Benutzer gesperrt. Änderungen kommen nur aus der Synchronisation, die mit den Regeln der Admin-Seite arbeitet. |
+| **Fremde Daten in Titel, Auszug, Slug, Autorname, Bildangaben.** Themes geben Titel, Auszüge und Autorennamen meist ohne Maskierung aus, weil WordPress dort HTML erlaubt. | Titel, Auszug und Autorname werden in reinen Text umgewandelt und **maskiert** gespeichert bzw. ausgegeben. Ein `&lt;script&gt;` im Titel der Quelle bleibt so Text. Slugs laufen über `sanitize_title`. Bild-URLs werden wie alle URLs geprüft (nur https). Größenangaben werden als Zahlen gespeichert. |
+| **Bild-Anhänge ohne Datei** werden von anderen Plugins wie normale Medien behandelt (z. B. Bildbearbeitung, Neuberechnung von Größen). | Die Anhänge haben keine lokale Datei (`get_attached_file` liefert nichts). Sie sind in der Mediathek ausgeblendet und für alle Benutzer gesperrt. Ihre URLs liefert nur das Plugin, aus geprüften Angaben. |
+| **Massenhaftes Anlegen** von Beiträgen durch eine große oder bösartige Quelle | Die Synchronisation läuft im Hintergrund und in Stapeln, mit einer Obergrenze pro Lauf und einer Sperre gegen parallele Läufe. |
+| **Doppelter Inhalt für Suchmaschinen** | Die Einzelansicht einer Kapsel setzt `rel="canonical"` auf den Originalbeitrag. |
+| **Fremde Autoren als lokale Benutzer** | Es werden nie Benutzer angelegt. Ohne Übersteuerung erscheint der Name des Originalautors nur als Text. Das Autoren-Archiv verweist dann auf den Beitrag selbst. |
+| **Zielkategorien und Schlagwörter auf Anweisung der Quelle** | Welche lokalen Begriffe entstehen, bestimmen ausschließlich die Import-Regeln eines Administrators. Kategorien und Schlagwörter der Quelle selbst werden nicht übernommen. |
 
 ## Privatsphäre
 
@@ -132,6 +148,7 @@ Gemeint sind REST-Routen, AJAX-Aktionen und Dateien, die es lokal nicht gibt und
 | Restrisiko | Bewertung |
 | --- | --- |
 | Eine **vertrauenswürdige Quelle wird gehackt** und liefert bösartige Skripte. | Betroffen sind nur Besucher ohne Bearbeitungsrechte, und nur deren Sicht auf die eingebetteten Bereiche bzw. die Seite. Die Seite selbst kann über deren Sitzungen nicht verändert werden. Die Vertrauensstufe ist auf eigene Seiten beschränkt und mit einem Klick widerrufbar. |
+| **Automatismen anderer Plugins beim Veröffentlichen** (Newsletter, Social-Media-Posts) greifen auch für importierte Beiträge. | Kein Sicherheitsrisiko im engeren Sinn, aber ungewollte Aussendungen sind möglich. Hinweis im Schnellstart: vor dem ersten Import prüfen. |
 | **Mitglieder-Sitzungen** (angemeldete Besucher ohne Bearbeitungsrechte) bei vertrauenswürdigen Quellen | Auf Mitgliederseiten je Quelle „nur nicht angemeldete Besucher“ aktivieren. |
 | **DNS-Rebinding:** Die Quelle löst zwischen Prüfung und Abruf plötzlich auf eine interne Adresse auf. | Theoretisch möglich, setzt die Kontrolle über den DNS der Quelle voraus. Bei eigenen Quellen praktisch ausgeschlossen. Bei fremden Quellen ist die Weiterleitungs-Route ohnehin aus. |
 | **Lücken im Reinigungscode** | Verwendet wird ein echter HTML-Parser mit Positivlisten. Zusätzlich gibt es eine Testsammlung bekannter XSS-Angriffsmuster, die bei jeder Änderung laufen muss. |

@@ -63,6 +63,41 @@ Einstellungen → Remote Articles ── SettingsPage ── SourceRepository, S
    - Links auf Medien der Quelle bleiben unverändert. Bilder und Videos werden zusätzlich für die eigene Lightbox markiert (`data-kornsw-ra-media`).
 5. **Eigene Interaktion:** `assets/lightbox.js` ersetzt die entfernten Skripte der Quelle, z. B. die Lightbox von KornSW AutoGallery.
 
+## Import als lokale Beiträge („Kapseln“)
+
+Über die Import-Regeln einer Quelle werden deren Beiträge zu echten, nicht bearbeitbaren Beiträgen der eigenen Seite. Sie mischen sich so in Archive, Startseite, Widgets, Feeds und Suche, und ein Klick öffnet die lokale Einzelansicht. Sicherheitsvorgaben: [security.md](security.md), Abschnitt 7.
+
+```text
+WP-Cron (stündlich) / „Jetzt synchronisieren“
+        │
+        ▼
+SyncScheduler ── Intervall je Quelle (Standard 4 h) oder offene Folgearbeit
+        │
+        ▼
+Synchronizer ── ImportRuleParser („rezepte, #backen > Kochen, #familie“)
+        │   1. Kategorien/Schlagwörter der Quelle → IDs
+        │   2. IDs + Änderungsdatum aller passenden Beiträge auflisten
+        │   3. nur neue/geänderte Beiträge vollständig laden (Stapel, Zeitbudget 15 s, neueste zuerst)
+        │   4. lokale Kategorien/Schlagwörter zuordnen (bei Bedarf anlegen)
+        │   5. nicht mehr passende Kapseln löschen (nur bei vollständiger Liste)
+        ▼
+CapsuleStore ── Beitrag (post) + Bild-Anhang ohne Datei
+
+Ausgabe: CapsulePresenter ── the_content (Platzhalter vor do_shortcode, Pipeline-Ergebnis am Ende),
+                             Bildgrößen der Quelle, Autorname, Canonical, Bearbeitungssperre
+```
+
+| Klasse (`src/Import/…`) | Aufgabe |
+| --- | --- |
+| `ImportRuleParser`, `ImportRule`, `TermReference` | Liest die Regeln. Links Slug oder ID der Quelle, rechts Namen lokaler Begriffe; `#` kennzeichnet Schlagwörter. Ohne WordPress testbar. |
+| `Synchronizer` | Gleicht eine Quelle ab. Bleiben Beiträge offen (Zeitbudget, max. 300 pro Lauf), plant er eine Minute später einen Folgelauf. Eine Sperre verhindert parallele Läufe. |
+| `SyncScheduler` | Stündliches WP-Cron-Ereignis `kornsw_ra_sync_due`. Startet fällige Quellen. Bei Deaktivierung wird das Ereignis entfernt. |
+| `SyncStatusRepository` | Ergebnis des letzten Laufs je Quelle (Option `kornsw_ra_sync_status`), angezeigt auf der Admin-Seite. |
+| `CapsuleStore`, `CapsuleData` | Speichert Kapseln. Schlüssel `_kornsw_ra_origin = <alias>:<ID>`. Das rohe HTML liegt in `_kornsw_ra_raw_content`, `post_content` enthält eine gereinigte Fassung mit unschädlich gemachten `[`/`]`. Titel und Auszug werden maskiert gespeichert. |
+| `CapsulePresenter` | Lässt Kapseln wie eigene Beiträge wirken und sperrt Bearbeiten und Löschen über `map_meta_cap`. |
+
+Vorschaubilder: Jede Kapsel bekommt einen Anhang ohne lokale Datei. `image_downsize`, `wp_get_attachment_url` und `wp_get_attachment_image_attributes` liefern die passende Bildgröße der Quelle samt `srcset`. In der Mediathek sind diese Anhänge ausgeblendet. Ist das Plugin deaktiviert, zeigt die `guid` des Anhangs weiterhin auf das Originalbild.
+
 ## Datenhaltung
 
 | Daten | Ort | Bei Deinstallation |
@@ -71,6 +106,9 @@ Einstellungen → Remote Articles ── SettingsPage ── SourceRepository, S
 | Einstellungen | Option `kornsw_ra_settings` (nicht autoload) | bleibt erhalten |
 | Zwischenspeicher | Transients `kornsw_ra_<hash>` | bleibt erhalten, läuft nach 30 Tagen ab |
 | Hinweise der Admin-Seite | Transient `kornsw_ra_notice_<Benutzer-ID>` (60 s) | läuft ab |
+| Importierte Beiträge und ihre Bild-Anhänge | Beiträge `post` / Anhänge mit Meta-Angaben `_kornsw_ra_*` | bleiben erhalten (beim Löschen einer Quelle werden ihre Kapseln entfernt) |
+| Lokale Kategorien und Schlagwörter aus Import-Regeln | normale Begriffe | bleiben erhalten |
+| Status der Synchronisation | Option `kornsw_ra_sync_status` (nicht autoload) | bleibt erhalten |
 
 ## Tests
 

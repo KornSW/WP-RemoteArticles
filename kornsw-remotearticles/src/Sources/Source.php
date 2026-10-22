@@ -12,6 +12,7 @@ use KornSW\RemoteArticles\Embedding\LinkMode;
 final class Source {
 
   public const ALIAS_PATTERN = '/^[a-z0-9][a-z0-9-]{0,39}$/';
+  public const DEFAULT_SYNC_INTERVAL_HOURS = 4;
 
   /**
    * @param string $alias Unique short name used in shortcodes.
@@ -21,6 +22,9 @@ final class Source {
    * @param LinkMode $linkMode Default treatment of links to pages of the source.
    * @param int $cacheTtlSeconds How long fetched data counts as fresh.
    * @param string $customCss Additional CSS entered by an administrator.
+   * @param string $importRules Import rules (see ImportRuleParser); '' = no import.
+   * @param int $importAuthorId Local user shown as author of imported posts (0 = name of the original author).
+   * @param int $syncIntervalHours Hours between automatic synchronizations of the import.
    */
   public function __construct(
     public readonly string $alias,
@@ -29,8 +33,18 @@ final class Source {
     public readonly string $encryptedPassword,
     public readonly LinkMode $linkMode,
     public readonly int $cacheTtlSeconds,
-    public readonly string $customCss
+    public readonly string $customCss,
+    public readonly string $importRules = '',
+    public readonly int $importAuthorId = 0,
+    public readonly int $syncIntervalHours = self::DEFAULT_SYNC_INTERVAL_HOURS
   ) {
+  }
+
+  /**
+   * Tells whether posts of this source are imported as local posts.
+   */
+  public function hasImportRules(): bool {
+    return trim($this->importRules) !== '';
   }
 
   /**
@@ -75,7 +89,10 @@ final class Source {
       (string)($data['encryptedPassword'] ?? ''),
       $linkMode,
       max(0, (int)($data['cacheTtlSeconds'] ?? 900)),
-      (string)($data['customCss'] ?? '')
+      (string)($data['customCss'] ?? ''),
+      (string)($data['importRules'] ?? ''),
+      max(0, (int)($data['importAuthorId'] ?? 0)),
+      max(1, (int)($data['syncIntervalHours'] ?? self::DEFAULT_SYNC_INTERVAL_HOURS))
     );
   }
 
@@ -93,6 +110,9 @@ final class Source {
       'linkMode' => $this->linkMode->value,
       'cacheTtlSeconds' => $this->cacheTtlSeconds,
       'customCss' => $this->customCss,
+      'importRules' => $this->importRules,
+      'importAuthorId' => $this->importAuthorId,
+      'syncIntervalHours' => $this->syncIntervalHours,
     ];
   }
 

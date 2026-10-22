@@ -9,6 +9,12 @@ use KornSW\RemoteArticles\Embedding\CssSanitizer;
 use KornSW\RemoteArticles\Embedding\HtmlSanitizer;
 use KornSW\RemoteArticles\Embedding\LinkClassifier;
 use KornSW\RemoteArticles\Embedding\UrlResolver;
+use KornSW\RemoteArticles\Import\CapsulePresenter;
+use KornSW\RemoteArticles\Import\CapsuleStore;
+use KornSW\RemoteArticles\Import\ImportRuleParser;
+use KornSW\RemoteArticles\Import\SyncScheduler;
+use KornSW\RemoteArticles\Import\Synchronizer;
+use KornSW\RemoteArticles\Import\SyncStatusRepository;
 use KornSW\RemoteArticles\Remote\ArticleRepository;
 use KornSW\RemoteArticles\Remote\RemoteClient;
 use KornSW\RemoteArticles\Remote\ResponseCache;
@@ -27,6 +33,8 @@ final class Plugin {
 
   private function __construct(
     private readonly RemoteArticlesShortcode $shortcode,
+    private readonly CapsulePresenter $capsulePresenter,
+    private readonly SyncScheduler $syncScheduler,
     private readonly SettingsPage $settingsPage
   ) {
   }
@@ -37,6 +45,13 @@ final class Plugin {
   public static function activate(): void {
     add_option(SourceRepository::OPTION_NAME, [], '', false);
     add_option(Settings::OPTION_NAME, Settings::getDefaults(), '', false);
+  }
+
+  /**
+   * Deactivation hook: stops the background synchronization. Sources and imported posts are kept.
+   */
+  public static function deactivate(): void {
+    SyncScheduler::unschedule();
   }
 
   /**
@@ -63,10 +78,19 @@ final class Plugin {
     $urlResolver = new UrlResolver();
     $htmlSanitizer = new HtmlSanitizer($urlResolver, new CssSanitizer($urlResolver), new LinkClassifier($urlResolver));
     $articleListRenderer = new ArticleListRenderer($htmlSanitizer, $urlResolver);
+    $assetLoader = new AssetLoader($settings);
 
-    $shortcode = new RemoteArticlesShortcode($sourceRepository, $articleRepository, $articleListRenderer, new AssetLoader($settings));
-    $settingsPage = new SettingsPage($sourceRepository, $settings, $secretBox, $remoteClient);
-    return new Plugin($shortcode, $settingsPage);
+    $capsuleStore = new CapsuleStore();
+    $importRuleParser = new ImportRuleParser();
+    $syncStatusRepository = new SyncStatusRepository();
+    $synchronizer = new Synchronizer($remoteClient, $capsuleStore, $importRuleParser, $htmlSanitizer, $urlResolver, $syncStatusRepository);
+
+    return new Plugin(
+      new RemoteArticlesShortcode($sourceRepository, $articleRepository, $articleListRenderer, $assetLoader),
+      new CapsulePresenter($capsuleStore, $sourceRepository, $htmlSanitizer, $urlResolver, $assetLoader),
+      new SyncScheduler($sourceRepository, $synchronizer, $syncStatusRepository),
+      new SettingsPage($sourceRepository, $settings, $secretBox, $remoteClient, $importRuleParser, $synchronizer, $capsuleStore, $syncStatusRepository)
+    );
   }
 
   /**
@@ -74,6 +98,8 @@ final class Plugin {
    */
   private function registerHooks(): void {
     add_action('init', [$this->shortcode, 'register']);
+    add_action('init', [$this->syncScheduler, 'register']);
+    $this->capsulePresenter->register();
     if (is_admin()) {
       $this->settingsPage->register();
     }

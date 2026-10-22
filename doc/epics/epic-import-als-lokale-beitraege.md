@@ -1,6 +1,6 @@
 # Epic: Import als lokale Beiträge
 
-Status: **Idee, zur Bestätigung** (22.10.2026). Revidiert bei Umsetzung die bisherige Abgrenzung „keine lokalen Kopien“ in [requirements.md](../requirements.md).
+Status: **umgesetzt** (22.10.2026). Revidiert die bisherige Abgrenzung „keine lokalen Kopien“ in [requirements.md](../requirements.md).
 
 ## Ziel
 
@@ -26,9 +26,9 @@ Beiträge einer Quelle erscheinen auf der eigenen Seite als **echte zusätzliche
 - Beitragstyp `post` ist nötig, damit Archive, Startseite, Widgets, Feeds und Suche die Beiträge ohne Eingriffe mitnehmen. Ein eigener Beitragstyp würde das nicht leisten.
 - Kennzeichnung über die Meta-Angabe `_kornsw_ra_origin = <alias>:<id>` (eindeutig). Dazu kommen Original-URL, Änderungsdatum der Quelle und die Kategorie-IDs der Quelle.
 - Datum und Slug werden von der Quelle übernommen. Kollidiert der Slug mit einem eigenen Beitrag, hängt WordPress automatisch eine Nummer an.
-- Autor: ein festgelegter lokaler Benutzer je Quelle.
+- Autor: Name des Originalautors als Text oder ein je Quelle gewählter lokaler Benutzer (siehe Entscheidungen).
 - Kommentare: geschlossen.
-- Beitragsbild: **kein** Herunterladen in die eigene Mediathek. Das Bild der Quelle wird bei der Ausgabe eingesetzt, dafür werden die WordPress-Filter für Beitragsbilder genutzt.
+- Beitragsbild: **kein** Herunterladen in die eigene Mediathek, sondern ein Bild-Anhangsobjekt ohne Datei, dessen URLs auf die Bildgrößen der Quelle zeigen (siehe Entscheidungen).
 
 ### Nicht bearbeitbar
 
@@ -65,12 +65,19 @@ Beiträge einer Quelle erscheinen auf der eigenen Seite als **echte zusätzliche
 - **Menge:** Ein Import kann viele Beiträge anlegen. Er läuft deshalb in Stapeln mit Obergrenzen.
 - Diese Punkte werden vor der Umsetzung als eigener Abschnitt in [security.md](../security.md) aufgenommen.
 
+## Entschieden (22.10.2026)
+
+1. **Aufbereitung erst bei der Ausgabe**, genau wie beim Shortcode. Die Quelle löst ihre Shortcodes auf. Gespeichert wird ihr gerendertes HTML, die Pipeline läuft bei jeder Ausgabe. Beim Import wird nichts endgültig aufgelöst.
+2. **Navigation:** Kapseln mischen sich agnostisch in normale Beitragslisten (Kategorie- oder Schlagwort-Archive, Startseite, Widgets). Ein Klick öffnet die **lokale** Einzelansicht der Kapsel im eigenen Theme, nie die fremde Seite. Weil die Kapsel ein echter Beitrag mit eigener Adresse ist, braucht es keine Umleitung.
+3. **Vorschaubild:** muss in jedem Theme passen. Jede Kapsel bekommt deshalb ein Bild-Anhangsobjekt **ohne lokale Datei**. Seine URLs und Bildgrößen zeigen auf die Größen der Quelle (Vorschau, mittel, groß).
+4. **Kategorien und Schlagwörter:** Regeln unterstützen beides, auf beiden Seiten. `kochen` steht für eine Kategorie, `#kochen` für ein Schlagwort.
+5. **Autor:** Standard ist der Name des Originalautors, nur als Text, ohne lokalen Benutzer. Je Quelle lässt sich ein lokaler Benutzer auswählen, der stattdessen als Autor erscheint.
+6. **Lokale Zielkategorien und -schlagwörter** werden bei Bedarf automatisch angelegt.
+7. **Synchronisation:** auf Knopfdruck und automatisch alle *x* Stunden, je Quelle einstellbar, Standard 4 Stunden.
+8. **Gelöscht oder aus allen Regeln gefallen:** Die Kapsel wird lokal gelöscht, denn sie ist nur ein Spiegel. Wird eine Quelle gelöscht, werden auch ihre Kapseln entfernt.
+9. **Suchmaschinen:** Die Einzelansicht setzt `rel="canonical"` auf das Original.
+
 ## Offene Fragen
 
-1. **„Shortcodes erst später auflösen“:** Ist das so gemeint wie oben beschrieben? Also: Die Quelle löst ihre Shortcodes auf, wir speichern das Ergebnis und bereiten es erst bei der Ausgabe mit der aktuellen Pipeline auf.
-2. **Einzelansicht:** Sollen importierte Beiträge eine eigene Seite auf der eigenen Seite haben (Vorschlag, mit Canonical auf das Original)? Oder soll ein Klick direkt zum Original führen?
-3. **An der Quelle gelöscht oder aus der Kategorie entfernt:** lokal löschen (Vorschlag) oder nur zurückziehen (Entwurf)?
-4. **Autor:** ein fester lokaler Benutzer je Quelle (Vorschlag) oder ein eigener Benutzer „Remote“?
-5. **Lokale Zielkategorie existiert nicht:** automatisch anlegen oder als Fehler melden (Vorschlag)?
-6. **Synchronisationsintervall:** z. B. stündlich (Vorschlag), je Quelle einstellbar?
-7. **Schlagwörter (Tags)** der Quelle mit übernehmen?
+1. Links im Inhalt, die auf einen ebenfalls importierten Beitrag zeigen, auf die lokale Kapsel umschreiben? Das wäre der erste Schritt des Epics [Links lokal nachbilden](epic-links-lokal-nachbilden.md).
+2. `noindex` je Quelle als zusätzliche Option?
