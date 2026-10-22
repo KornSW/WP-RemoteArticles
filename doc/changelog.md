@@ -4,6 +4,11 @@
 
 *(none)*
 
+## v 1.0.7
+released **2026-10-22**, including:
+ - fixes 2
+
+
 ## v 1.0.6
 released **2026-10-22**, including:
  - fix
