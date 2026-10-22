@@ -1,13 +1,13 @@
 {
-  "currentVersionWithSuffix": "1.0.4",
+  "currentVersionWithSuffix": "1.0.5",
   "releaseType": "",
-  "currentVersion": "1.0.4",
+  "currentVersion": "1.0.5",
   "currentMajor": 1,
   "currentMinor": 0,
-  "currentFix": 4,
-  "previousVersion": "1.0.3",
+  "currentFix": 5,
+  "previousVersion": "1.0.4",
   "changeGrade": "fix",
-  "versionTimeInfo": "12:43:43",
+  "versionTimeInfo": "19:01:18",
   "versionDateInfo": "2026-10-22",
-  "versionNotes": "- fix mapping\n"
+  "versionNotes": "- Fix für gallery\n"
 }

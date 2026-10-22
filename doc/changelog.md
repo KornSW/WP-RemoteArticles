@@ -4,6 +4,11 @@
 
 *(none)*
 
+## v 1.0.5
+released **2026-10-22**, including:
+ - Fix für gallery
+
+
 ## v 1.0.4
 released **2026-10-22**, including:
  - fix mapping
