@@ -31,9 +31,12 @@ TestRun::check($roundTrip !== null && $roundTrip->buildRequestFields('abc')['act
 
 // --- placeholders ---
 $inserter = new GalleryPlaceholderInserter();
+$noNextGen = function (int $index): string {
+  return 'unused';
+};
 $placeholderResult = $inserter->insert($moduleMarkup, function (ShareOneDriveModule $module): string {
   return 'https://eigene.example/wp-json/kornsw-remotearticles/v1/gallery?d=x&s=y';
-});
+}, $noNextGen);
 TestRun::check($placeholderResult['count'] === 1, 'gallery module is detected', $placeholderResult['html']);
 TestRun::check(
   str_contains($placeholderResult['html'], 'data-kornsw-ra-gallery="https://eigene.example/wp-json/kornsw-remotearticles/v1/gallery?d=x&amp;s=y"')
@@ -43,8 +46,48 @@ TestRun::check(
 );
 $noGallery = $inserter->insert('<p>ShareoneDrive als Wort</p>', function (): string {
   return 'x';
-});
+}, $noNextGen);
 TestRun::check($noGallery['count'] === 0 && $noGallery['html'] === '<p>ShareoneDrive als Wort</p>', 'content without gallery module stays unchanged');
+TestRun::check(str_contains($placeholderResult['html'], 'Galerie wird geladen') && str_contains($placeholderResult['html'], 'aria-busy="true"'), 'placeholder shows a loading indicator');
+
+// --- NextGEN placeholders and page galleries ---
+$nextGenResult = $inserter->insert(
+  "<p>Text</p>\nngg_shortcode_0_placeholder\n<h2>Teil</h2><p>ngg_shortcode_1_placeholder</p><p>Ende</p>",
+  function (): string {
+    return 'unused';
+  },
+  function (int $index): string {
+    return 'https://eigene.example/gallery?n=' . $index;
+  }
+);
+TestRun::check($nextGenResult['count'] === 2, 'NextGEN placeholders are detected', $nextGenResult['html']);
+TestRun::check(
+  str_contains($nextGenResult['html'], 'gallery?n=0') && str_contains($nextGenResult['html'], 'gallery?n=1')
+    && !str_contains($nextGenResult['html'], 'ngg_shortcode') && !str_contains($nextGenResult['html'], '<p></p>'),
+  'NextGEN placeholders are numbered in document order and replaced completely (also when wrapped in <p>)',
+  $nextGenResult['html']
+);
+TestRun::check(
+  !str_contains(sanitizeForTest('<div data-kornsw-ra-nextgen="0">x</div>'), 'data-kornsw-ra-nextgen'),
+  'the internal NextGEN marker cannot be forged by the source (removed by the sanitizer)'
+);
+
+$nextGenParser = new \KornSW\RemoteArticles\Galleries\NextGenGalleryParser(new UrlResolver());
+$nextGenPage = '<html><body><aside><div data-nextgen-gallery-id="99"><a href="https://quelle.example/wp-content/gallery/w/a.jpg"><img src="https://quelle.example/wp-content/gallery/w/thumbs/a.jpg" width="100" height="100"></a></div></aside>'
+  . '<article><div class="entry-content"><p>x</p>'
+  . '<div class="ngg-galleryoverview" data-nextgen-gallery-id="19"><div class="ngg-gallery-thumbnail"><a href="/wp-content/gallery/aida/1.jpg" data-title="Bild 1"><img src="/wp-content/gallery/aida/thumbs/thumbs_1.jpg" width="240" height="160" alt="Alt 1"></a></div>'
+  . '<div class="ngg-gallery-thumbnail"><a href="https://evil.example/2.jpg"><img src="/wp-content/gallery/aida/thumbs/thumbs_2.jpg" width="240" height="160"></a></div>'
+  . '<div class="ngg-gallery-thumbnail"><a href="javascript:alert(1)"><img src="/x.jpg"></a></div></div>'
+  . '<div class="ngg-galleryoverview" data-nextgen-gallery-id="20"><a href="/wp-content/gallery/aida/3.jpg"><img src="/wp-content/gallery/aida/thumbs/thumbs_3.jpg" width="160" height="240"></a></div>'
+  . '</div></article></body></html>';
+$nextGenGalleries = $nextGenParser->parse($nextGenPage, 'https://quelle.example/2022/aida/', 'quelle.example');
+TestRun::check(count($nextGenGalleries) === 2, 'NextGEN galleries are taken from the post content only (not from widgets)', print_r($nextGenGalleries, true));
+TestRun::check(
+  count($nextGenGalleries[0]) === 1 && $nextGenGalleries[0][0]->mediaUrl === 'https://quelle.example/wp-content/gallery/aida/1.jpg'
+    && $nextGenGalleries[0][0]->title === 'Bild 1' && $nextGenGalleries[0][0]->height === 160,
+  'NextGEN items: relative URLs resolved, foreign hosts and javascript: dropped, title and size taken over'
+);
+TestRun::check(count($nextGenGalleries[1]) === 1 && $nextGenGalleries[1][0]->width === 160, 'second NextGEN gallery in order');
 
 // --- response parsing ---
 $parser = new ShareOneDriveResponseParser(new UrlResolver());

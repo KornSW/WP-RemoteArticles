@@ -91,6 +91,12 @@
     return requestGallery(url, false)
       .then(function (data) {
         var targetHeight = parseInt(data.height, 10) || 300;
+        // Remove the loading indicator before the items are added.
+        while (placeholder.firstChild) {
+          placeholder.removeChild(placeholder.firstChild);
+        }
+        placeholder.removeAttribute('aria-busy');
+        placeholder.style.setProperty('--kornsw-ra-gallery-height', targetHeight + 'px');
         var items = Array.isArray(data.items) ? data.items : [];
         items.forEach(function (item) {
           if (isHttpsUrl(item.url) && isHttpsUrl(item.thumbnail)) {

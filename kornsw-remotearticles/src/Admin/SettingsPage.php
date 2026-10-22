@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace KornSW\RemoteArticles\Admin;
 
 use KornSW\RemoteArticles\Embedding\LinkMode;
+use KornSW\RemoteArticles\Galleries\ShareOneDriveGalleries;
 use KornSW\RemoteArticles\Import\CapsuleStore;
 use KornSW\RemoteArticles\Import\ImportRuleParser;
 use KornSW\RemoteArticles\Import\Synchronizer;
@@ -49,7 +50,8 @@ final class SettingsPage {
     private readonly ImportRuleParser $importRuleParser,
     private readonly Synchronizer $synchronizer,
     private readonly CapsuleStore $capsuleStore,
-    private readonly SyncStatusRepository $syncStatusRepository
+    private readonly SyncStatusRepository $syncStatusRepository,
+    private readonly ShareOneDriveGalleries $shareOneDriveGalleries
   ) {
   }
 
@@ -218,6 +220,13 @@ final class SettingsPage {
   public function handleSaveSettings(): void {
     $this->verifyRequest(self::ACTION_SAVE_SETTINGS);
     $this->settings->setDefaultStyleSheetEnabled(isset($_POST['use_default_style_sheet']) && $_POST['use_default_style_sheet'] === '1');
+
+    // Only templates the theme offers for posts are accepted.
+    $template = (string)wp_unslash((string)($_POST['capsule_template'] ?? ''));
+    if ($template !== '' && !isset($this->getPostTemplates()[$template])) {
+      $template = '';
+    }
+    $this->settings->setCapsuleTemplate($template);
     $this->redirectWithNotice('success', 'Die Einstellungen wurden gespeichert.');
   }
 
@@ -239,6 +248,7 @@ final class SettingsPage {
     echo '<h1>Remote Articles</h1>';
     $this->renderNotice();
     $this->renderSourceTable($sources);
+    $this->renderLastGalleryError();
     $this->renderSourceForm($editedSource);
     $this->renderUsage();
     $this->renderSettingsForm();
@@ -291,6 +301,18 @@ final class SettingsPage {
       echo '</tr>';
     }
     echo '</tbody></table>';
+  }
+
+  /**
+   * Shows the last error of an embedded gallery (e.g. Share-one-Drive), so that problems of a source become visible.
+   */
+  private function renderLastGalleryError(): void {
+    $error = $this->shareOneDriveGalleries->getLastError();
+    if ($error === null) {
+      return;
+    }
+    $timeLabel = wp_date((string)get_option('date_format') . ' ' . (string)get_option('time_format'), $error['time']);
+    echo '<p><strong>Letzter Galerie-Fehler</strong> (' . esc_html((string)$timeLabel) . ', Quelle „' . esc_html($error['alias']) . '“): ' . esc_html($error['message']) . '</p>';
   }
 
   /**
@@ -480,8 +502,40 @@ final class SettingsPage {
     wp_nonce_field(self::ACTION_SAVE_SETTINGS);
     echo '<p><label><input type="checkbox" name="use_default_style_sheet" value="1"' . checked($this->settings->isDefaultStyleSheetEnabled(), true, false) . '> ';
     echo 'Standard-Stylesheet des Plugins laden (abschalten, wenn das Theme die Darstellung vollständig übernimmt)</label></p>';
+
+    $postTemplates = $this->getPostTemplates();
+    $selectedTemplate = $this->settings->getCapsuleTemplate();
+    echo '<p><label for="kornsw-ra-capsule-template">Template für importierte Beiträge</label><br>';
+    echo '<select id="kornsw-ra-capsule-template" name="capsule_template">';
+    echo '<option value="">Standard-Template des Themes</option>';
+    foreach ($postTemplates as $templateFile => $templateName) {
+      echo '<option value="' . esc_attr($templateFile) . '"' . selected($templateFile, $selectedTemplate, false) . '>' . esc_html($templateName) . '</option>';
+    }
+    if ($selectedTemplate !== '' && !isset($postTemplates[$selectedTemplate])) {
+      echo '<option value="' . esc_attr($selectedTemplate) . '" selected>' . esc_html($selectedTemplate) . ' (im Theme nicht mehr vorhanden)</option>';
+    }
+    echo '</select></p>';
+    echo '<p class="description">Importierte Beiträge sind nicht bearbeitbar; ihr Template wird deshalb hier für alle gemeinsam festgelegt (z. B. „No Sidebar“). Gilt sofort, auch für bereits importierte Beiträge.';
+    if (count($postTemplates) === 0) {
+      echo ' Das aktive Theme bietet keine Beitrags-Templates an.';
+    }
+    echo '</p>';
+
     submit_button('Einstellungen speichern');
     echo '</form>';
+  }
+
+  /**
+   * Returns the templates the active theme offers for posts (file or slug => name).
+   *
+   * @return array<string, string>
+   */
+  private function getPostTemplates(): array {
+    $templates = [];
+    foreach (wp_get_theme()->get_page_templates(null, 'post') as $templateFile => $templateName) {
+      $templates[(string)$templateFile] = (string)$templateName;
+    }
+    return $templates;
   }
 
   /**

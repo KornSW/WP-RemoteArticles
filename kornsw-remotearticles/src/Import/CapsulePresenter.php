@@ -10,6 +10,7 @@ use KornSW\RemoteArticles\Embedding\LinkMode;
 use KornSW\RemoteArticles\Embedding\UrlResolver;
 use KornSW\RemoteArticles\Galleries\ShareOneDriveGalleries;
 use KornSW\RemoteArticles\Rendering\AssetLoader;
+use KornSW\RemoteArticles\Settings;
 use KornSW\RemoteArticles\Sources\SourceRepository;
 
 /**
@@ -36,7 +37,8 @@ final class CapsulePresenter {
     private readonly HtmlSanitizer $htmlSanitizer,
     private readonly UrlResolver $urlResolver,
     private readonly AssetLoader $assetLoader,
-    private readonly ShareOneDriveGalleries $shareOneDriveGalleries
+    private readonly ShareOneDriveGalleries $shareOneDriveGalleries,
+    private readonly Settings $settings
   ) {
     $this->placeholderToken = bin2hex(random_bytes(8));
   }
@@ -61,6 +63,8 @@ final class CapsulePresenter {
     add_filter('get_canonical_url', [$this, 'filterCanonicalUrl'], 10, 2);
     add_filter('wpseo_canonical', [$this, 'filterSeoPluginCanonical']);
     add_filter('rank_math/frontend/canonical', [$this, 'filterSeoPluginCanonical']);
+
+    add_filter('get_post_metadata', [$this, 'filterCapsuleTemplate'], 10, 4);
 
     add_filter('map_meta_cap', [$this, 'lockCapsules'], 10, 4);
     add_filter('display_post_states', [$this, 'addPostState'], 10, 2);
@@ -262,6 +266,26 @@ final class CapsulePresenter {
       return $canonicalUrl;
     }
     return $this->filterCanonicalUrl($canonicalUrl, $post);
+  }
+
+  /**
+   * get_post_metadata: capsules use the post template chosen in the general settings ("_wp_page_template"), because
+   * they cannot be edited. Applied on every read, so a changed setting affects existing capsules immediately.
+   *
+   * @return mixed The filtered value, or $value unchanged (null = let WordPress read the meta data).
+   */
+  public function filterCapsuleTemplate(mixed $value, mixed $objectId, mixed $metaKey, mixed $single): mixed {
+    if ($metaKey !== '_wp_page_template') {
+      return $value;
+    }
+    $template = $this->settings->getCapsuleTemplate();
+    if ($template === '' || !$this->capsuleStore->isCapsule((int)$objectId)) {
+      return $value;
+    }
+    if ($single) {
+      return $template;
+    }
+    return [$template];
   }
 
   /**

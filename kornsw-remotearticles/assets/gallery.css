@@ -15,8 +15,43 @@
 
 .kornsw-ra-gallery-loading {
   min-height: var(--kornsw-ra-gallery-height, 300px);
+  align-items: center;
+  justify-content: center;
+  gap: 0.75em;
   border-radius: 4px;
   background: rgba(127, 127, 127, 0.08);
+}
+
+/* Loading indicator: a spinning ring (pure CSS, no image file) next to the label. */
+.kornsw-ra-gallery-loading::before {
+  content: '';
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(127, 127, 127, 0.3);
+  border-top-color: rgba(127, 127, 127, 0.9);
+  border-radius: 50%;
+  animation: kornsw-ra-spin 0.9s linear infinite;
+}
+
+.kornsw-ra-gallery-loading::after {
+  display: none;
+}
+
+.kornsw-ra-gallery-loading-label {
+  font-size: 0.875em;
+  opacity: 0.75;
+}
+
+@keyframes kornsw-ra-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kornsw-ra-gallery-loading::before {
+    animation-duration: 3s;
+  }
 }
 
 .kornsw-ra-gallery-item {

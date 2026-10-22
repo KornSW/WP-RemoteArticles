@@ -126,6 +126,12 @@ JSON → gallery.js baut die Galerie (Blocksatz) → Lightbox (gruppiert je Gale
 
 Andere Module von Share-one-Drive, etwa Dateilisten oder Player, bleiben ohne Skript unsichtbar.
 
+**NextGEN Gallery** läuft über denselben Endpunkt (`kind: nextgen`). Die Platzhalter `ngg_shortcode_N_placeholder` im REST-Inhalt werden der Reihe nach den Galerien im Beitragsinhalt der Originalseite zugeordnet (`NextGenGalleryParser`; Originalseite 6 h zwischengespeichert). Die Zeilenhöhe entspricht der Höhe der Vorschaubilder, damit nichts hochskaliert wird.
+
+Platzhalter zeigen bis zum Laden einen CSS-Spinner mit „Galerie wird geladen …“.
+
+**Template importierter Beiträge:** Unter „Allgemein“ wird ein Beitrags-Template des Themes gewählt, z. B. „No Sidebar“. `CapsulePresenter` liefert es über den Filter `get_post_metadata` für `_wp_page_template` bei jedem Lesen. Es gilt dadurch sofort für alle Kapseln, ohne Synchronisation, und ohne gespeicherte Angabe je Beitrag.
+
 ## Datenhaltung
 
 | Daten | Ort | Bei Deinstallation |

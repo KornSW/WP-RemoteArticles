@@ -41,7 +41,7 @@ final class ShareOneDriveResponseParser {
     try {
       $data = json_decode($responseBody, true, 32, JSON_THROW_ON_ERROR);
     } catch (\JsonException) {
-      throw new \InvalidArgumentException('Die Galerie-Antwort der Quelle ist kein JSON.');
+      throw new \InvalidArgumentException('Die Galerie-Antwort der Quelle ist kein JSON: „' . $this->describeBody($responseBody) . '“');
     }
     if (!is_array($data) || !isset($data['html']) || !is_string($data['html'])) {
       throw new \InvalidArgumentException('Die Galerie-Antwort der Quelle enthält keine Galerie.');
@@ -65,6 +65,17 @@ final class ShareOneDriveResponseParser {
       }
     }
     return $items;
+  }
+
+  /**
+   * Returns the beginning of a response as plain text for error messages (e.g. "-1" for a rejected nonce).
+   */
+  private function describeBody(string $responseBody): string {
+    $text = trim((string)preg_replace('/\s+/u', ' ', strip_tags($responseBody)));
+    if ($text === '') {
+      return '(leer)';
+    }
+    return mb_substr($text, 0, 80);
   }
 
   /**

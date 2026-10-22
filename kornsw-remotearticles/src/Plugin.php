@@ -10,6 +10,7 @@ use KornSW\RemoteArticles\Embedding\HtmlSanitizer;
 use KornSW\RemoteArticles\Embedding\LinkClassifier;
 use KornSW\RemoteArticles\Embedding\UrlResolver;
 use KornSW\RemoteArticles\Galleries\GalleryPlaceholderInserter;
+use KornSW\RemoteArticles\Galleries\NextGenGalleryParser;
 use KornSW\RemoteArticles\Galleries\ShareOneDriveGalleries;
 use KornSW\RemoteArticles\Galleries\ShareOneDriveResponseParser;
 use KornSW\RemoteArticles\Import\CapsulePresenter;
@@ -86,6 +87,7 @@ final class Plugin {
       $sourceRepository,
       $remoteClient,
       new ShareOneDriveResponseParser($urlResolver),
+      new NextGenGalleryParser($urlResolver),
       new GalleryPlaceholderInserter(),
       $assetLoader
     );
@@ -98,10 +100,10 @@ final class Plugin {
 
     return new Plugin(
       new RemoteArticlesShortcode($sourceRepository, $articleRepository, $articleListRenderer, $assetLoader),
-      new CapsulePresenter($capsuleStore, $sourceRepository, $htmlSanitizer, $urlResolver, $assetLoader, $shareOneDriveGalleries),
+      new CapsulePresenter($capsuleStore, $sourceRepository, $htmlSanitizer, $urlResolver, $assetLoader, $shareOneDriveGalleries, $settings),
       new SyncScheduler($sourceRepository, $synchronizer, $syncStatusRepository),
       $shareOneDriveGalleries,
-      new SettingsPage($sourceRepository, $settings, $secretBox, $remoteClient, $importRuleParser, $synchronizer, $capsuleStore, $syncStatusRepository)
+      new SettingsPage($sourceRepository, $settings, $secretBox, $remoteClient, $importRuleParser, $synchronizer, $capsuleStore, $syncStatusRepository, $shareOneDriveGalleries)
     );
   }
 

@@ -153,6 +153,8 @@ Galerien des Plugins „Share-one-Drive“ laden ihre Bilder nur per Skript und 
 
 Die Medien-URLs enthalten Zugriffstoken von Microsoft, die nach einigen Stunden ablaufen. Galerien gelten deshalb eine Stunde als frisch und dienen bei Ausfall der Quelle höchstens drei Stunden als Rückfall. Danach wären ihre URLs abgelaufen. Die Nonce der Quelle wird sechs Stunden vorgehalten und einmal erneuert, wenn sie abgelehnt wird. Weil die Galerie-Anfrage der Quelle sehr langsam sein kann (Neuaufbau ihres eigenen Zwischenspeichers, gemessen bis über 20 s), gelten für sie 25 s Zeitlimit und für den Endpunkt 60 s Laufzeit. Das Skript lädt höchstens zwei Galerien gleichzeitig und versucht es einmal erneut.
 
+**NextGEN Gallery:** NextGEN setzt seine Galerien erst am Ende der Seitenausgabe ein; im REST-Inhalt steht nur `ngg_shortcode_N_placeholder`. Der Platzhalter wird über denselben signierten Endpunkt gefüllt. Der Server liest dazu die Originalseite (nur Host der Quelle) und nimmt die N-te Galerie **innerhalb des Beitragsinhalts**. Übernommen werden nur Daten: Bild- und Vorschau-URLs, die https auf dem Host der Quelle sein müssen, Titel als Text und Maße. Die interne Markierung `data-kornsw-ra-nextgen` kann die Quelle nicht fälschen, weil der Sanitizer alle Attribute `data-kornsw-ra-*` entfernt.
+
 ## Privatsphäre
 
 - Bilder, Videos und (in der Stufe „vertrauenswürdig“) Skripte lädt der Browser des Besuchers **direkt von der Quelle**. Die Quelle sieht dadurch IP-Adresse und Browserdaten der Besucher. Bei eigenen Quellseiten ist das unkritisch, gehört aber in die Datenschutzerklärung. Für fremde Quellen kann später ein Laden über die eigene Seite ergänzt werden.

@@ -61,6 +61,8 @@ Wichtig zu wissen:
 - Importierte Beiträge sind in der Beitragsliste mit „Importiert von …“ markiert und **nicht bearbeitbar**. Änderungen an der Quelle kommen mit der nächsten Synchronisation.
 - Wird ein Beitrag an der Quelle gelöscht oder passt er zu keiner Regel mehr, wird er hier ebenfalls entfernt. Löscht man die Quelle, verschwinden auch ihre importierten Beiträge.
 - Suchmaschinen erhalten über `rel="canonical"` den Hinweis auf das Original.
+- Das **Template** importierter Beiträge (z. B. „No Sidebar“) wird unter *Einstellungen → Remote Articles → Allgemein* für alle gemeinsam gewählt und gilt sofort.
+- **Galerien** von Share-one-Drive (OneDrive) und NextGEN Gallery werden nachgeladen und öffnen sich in der Lightbox. Andere Galerie-Plugins, die ihre Bilder per JavaScript laden, bleiben leer.
 - Plugins, die beim Veröffentlichen neuer Beiträge automatisch etwas tun (z. B. Newsletter oder Social-Media-Posts), behandeln importierte Beiträge wie eigene. Das vor dem ersten Import prüfen.
 - WP-Cron läuft nur bei Seitenaufrufen. Auf wenig besuchten Seiten startet die Synchronisation deshalb später; für pünktliche Läufe einen System-Cron einrichten, der `wp-cron.php` regelmäßig aufruft.
 

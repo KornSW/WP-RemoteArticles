@@ -29,6 +29,23 @@ final class Settings {
   }
 
   /**
+   * Returns the post template (file or slug as stored in "_wp_page_template") used for imported posts; '' = theme default.
+   */
+  public function getCapsuleTemplate(): string {
+    $settings = $this->load();
+    return (string)$settings['capsuleTemplate'];
+  }
+
+  /**
+   * Stores the post template for imported posts ('' = theme default).
+   */
+  public function setCapsuleTemplate(string $template): void {
+    $settings = $this->load();
+    $settings['capsuleTemplate'] = $template;
+    update_option(self::OPTION_NAME, $settings, false);
+  }
+
+  /**
    * Returns the default values of all settings.
    *
    * @return array<string, mixed>
@@ -36,6 +53,7 @@ final class Settings {
   public static function getDefaults(): array {
     return [
       'useDefaultStyleSheet' => true,
+      'capsuleTemplate' => '',
     ];
   }
 
