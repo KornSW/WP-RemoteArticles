@@ -425,7 +425,7 @@ final class SettingsPage {
 
     echo '<tr><th scope="row"><label for="kornsw-ra-import-rules">Import (optional)</label></th><td>';
     echo '<textarea id="kornsw-ra-import-rules" name="import_rules" class="large-text code" rows="4" placeholder="rezepte, backen &gt; Kochen">' . esc_textarea($importRules) . '</textarea>';
-    echo '<p class="description">Übernimmt Beiträge der Quelle als nicht bearbeitbare Beiträge dieser Seite. Sie erscheinen gemischt mit den eigenen Beiträgen in Archiven, auf der Startseite, in Widgets und in der Suche und öffnen sich hier. Eine Regel pro Zeile: <code>Kategorien der Quelle &gt; lokale Kategorien</code>. Mehrere Einträge durch Komma trennen, Schlagwörter mit <code>#</code> kennzeichnen, z. B. <code>rezepte, #backen &gt; Kochen, #familie</code>. Links stehen Slug oder ID der Quelle, rechts Namen lokaler Kategorien bzw. Schlagwörter (werden bei Bedarf angelegt).</p>';
+    echo '<p class="description">Übernimmt Beiträge der Quelle als nicht bearbeitbare Beiträge dieser Seite. Sie erscheinen gemischt mit den eigenen Beiträgen in Archiven, auf der Startseite, in Widgets und in der Suche und öffnen sich hier. Eine Regel pro Zeile (oder mehrere mit <code>;</code> getrennt): <code>Kategorien der Quelle &gt; lokale Kategorien</code>. Mehrere Kategorien innerhalb einer Regel durch Komma trennen, Schlagwörter mit <code>#</code> kennzeichnen, z. B. <code>rezepte, #backen &gt; Kochen, #familie</code>. Links stehen Slug oder ID der Quelle, rechts Namen lokaler Kategorien bzw. Schlagwörter (werden bei Bedarf angelegt).</p>';
     echo '</td></tr>';
 
     echo '<tr><th scope="row"><label for="kornsw-ra-import-author">Autor importierter Beiträge</label></th><td>';

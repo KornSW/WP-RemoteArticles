@@ -23,6 +23,20 @@ TestRun::check($rules[1]->localTerms[1]->isTag() && $rules[1]->localTerms[1]->va
 TestRun::check($rules[1]->localTerms[1]->toNotation() === '#Familie & Freunde', 'notation of a tag');
 TestRun::check(count($parser->parse("  \n// nur Kommentar\n")) === 0, 'no rules = no import');
 
+$semicolonRules = $parser->parse('brick-tipps  >Tipps ; brick-projects > Bauprojekte;');
+TestRun::check(
+  count($semicolonRules) === 2 && $semicolonRules[0]->localTerms[0]->value === 'Tipps' && $semicolonRules[1]->remoteTerms[0]->value === 'brick-projects',
+  'several rules in one line separated by ";"'
+);
+
+$commaMessage = '';
+try {
+  $parser->parse('brick-tipps  >Tipps , brick-projects > Bauprojekte');
+} catch (\InvalidArgumentException $exception) {
+  $commaMessage = $exception->getMessage();
+}
+TestRun::check(str_contains($commaMessage, '„;“'), 'rules separated by comma get a hint to use ";" or line breaks', $commaMessage);
+
 $invalidRules = [
   'missing ">"' => 'rezepte Kochen',
   'two ">"' => 'a > b > c',

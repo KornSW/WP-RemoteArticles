@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace KornSW\RemoteArticles\Import;
 
 /**
- * Parses the import rules of a source. One rule per line:
+ * Parses the import rules of a source. Rules are separated by line breaks or ";":
  *
  *   RemoteKat1, RemoteKat2 > LokaleKat
- *   rezepte, #backen > Kochen, #familie
+ *   rezepte, #backen > Kochen, #familie; reisen > Unterwegs
  *
  * Left: categories (slug or ID) and tags ("#" + slug or ID) of the source. Right: names of local categories and tags.
+ * The comma separates entries within one side, so it cannot separate rules ("a > X, b > Y" is ambiguous and rejected).
  * Empty lines and lines starting with "//" are ignored.
  */
 final class ImportRuleParser {
@@ -37,21 +38,33 @@ final class ImportRuleParser {
       if ($trimmedLine === '' || str_starts_with($trimmedLine, '//')) {
         continue;
       }
-      $rules[] = $this->parseLine($trimmedLine, $index + 1);
-      if (count($rules) > self::MAXIMUM_RULES) {
-        throw new \InvalidArgumentException(sprintf('Es sind höchstens %d Import-Regeln erlaubt.', self::MAXIMUM_RULES));
+      foreach (explode(';', $trimmedLine) as $ruleText) {
+        $trimmedRule = trim($ruleText);
+        if ($trimmedRule === '') {
+          continue;
+        }
+        $rules[] = $this->parseRule($trimmedRule, $index + 1);
+        if (count($rules) > self::MAXIMUM_RULES) {
+          throw new \InvalidArgumentException(sprintf('Es sind höchstens %d Import-Regeln erlaubt.', self::MAXIMUM_RULES));
+        }
       }
     }
     return $rules;
   }
 
   /**
-   * Parses one rule line.
+   * Parses one rule.
    */
-  private function parseLine(string $line, int $lineNumber): ImportRule {
-    $sides = explode('>', $line);
+  private function parseRule(string $rule, int $lineNumber): ImportRule {
+    $sides = explode('>', $rule);
+    if (count($sides) > 2) {
+      throw new \InvalidArgumentException(sprintf(
+        'Import-Regel in Zeile %d: Mehrere Regeln müssen in eigenen Zeilen stehen oder mit „;“ getrennt werden, z. B. „brick-tipps > Tipps; brick-projects > Bauprojekte“. Das Komma trennt nur mehrere Kategorien innerhalb einer Regel.',
+        $lineNumber
+      ));
+    }
     if (count($sides) !== 2) {
-      throw new \InvalidArgumentException(sprintf('Import-Regel in Zeile %d: genau ein „>“ zwischen Quelle und Ziel erwartet, z. B. „rezepte > Kochen“.', $lineNumber));
+      throw new \InvalidArgumentException(sprintf('Import-Regel in Zeile %d: „>“ zwischen Quelle und Ziel fehlt, z. B. „rezepte > Kochen“.', $lineNumber));
     }
 
     $remoteTerms = $this->parseTermList($sides[0], self::REMOTE_VALUE_PATTERN, $lineNumber, 'Quelle');

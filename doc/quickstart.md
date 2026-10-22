@@ -51,7 +51,7 @@ Statt per Shortcode lassen sich Beiträge einer Quelle als normale Beiträge die
    #reise > Unterwegs, #urlaub
    ```
 
-   Links stehen Kategorien der Quelle (Slug oder ID), rechts lokale Kategorien. Schlagwörter werden mit `#` gekennzeichnet. Fehlende lokale Kategorien und Schlagwörter werden automatisch angelegt.
+   Eine Regel pro Zeile, oder mehrere Regeln mit `;` getrennt (z. B. `brick-tipps > Tipps; brick-projects > Bauprojekte`). Das Komma trennt nur mehrere Kategorien innerhalb einer Regel. Links stehen Kategorien der Quelle (Slug oder ID), rechts lokale Kategorien. Schlagwörter werden mit `#` gekennzeichnet. Fehlende lokale Kategorien und Schlagwörter werden automatisch angelegt.
 2. Optional einen **Autor** wählen. Ohne Auswahl erscheint der Name des Originalautors.
 3. **Synchronisation** alle *x* Stunden einstellen (Standard 4) und speichern. Beim Speichern prüft das Plugin, ob die Kategorien der Quelle existieren.
 4. In der Liste **Jetzt synchronisieren** klicken. Große Kategorien werden in mehreren Durchgängen übernommen, die neuesten zuerst. Die weiteren Durchgänge starten automatisch im Hintergrund.
