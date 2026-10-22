@@ -74,17 +74,19 @@ final class RemoteClient {
 
   /**
    * Posts a form to admin-ajax.php of the source - the only POST target - as an anonymous visitor of $refererUrl.
-   * Plugins of the source may reject requests without a referer of their own site.
+   * Plugins of the source may reject requests without a referer of their own site. Some of them are slow (e.g. when they
+   * rebuild their own cache), so callers may allow a longer timeout.
    *
    * @param array<string, string> $fields
    * @throws RemoteException
    */
-  public function postAdminAjax(Source $source, array $fields, string $refererUrl): string {
+  public function postAdminAjax(Source $source, array $fields, string $refererUrl, int $timeoutSeconds = self::TIMEOUT_SECONDS): string {
     $this->assertSourceUrl($source, $refererUrl);
     $arguments = $this->buildAnonymousArguments('application/json');
     $arguments['method'] = 'POST';
     $arguments['body'] = $fields;
     $arguments['headers']['Referer'] = $refererUrl;
+    $arguments['timeout'] = $timeoutSeconds;
 
     $response = wp_safe_remote_request($source->baseUrl . '/wp-admin/admin-ajax.php', $arguments);
     if (is_wp_error($response)) {
@@ -102,10 +104,11 @@ final class RemoteClient {
    *
    * @throws RemoteException
    */
-  public function getRedirectTarget(Source $source, string $url): ?string {
+  public function getRedirectTarget(Source $source, string $url, int $timeoutSeconds = self::TIMEOUT_SECONDS): ?string {
     $this->assertSourceUrl($source, $url);
     $arguments = $this->buildAnonymousArguments('*/*');
     $arguments['limit_response_size'] = 64 * 1024;
+    $arguments['timeout'] = $timeoutSeconds;
     $response = wp_safe_remote_get($url, $arguments);
     if (is_wp_error($response)) {
       throw new RemoteException(sprintf('Die Quelle „%s“ ist nicht erreichbar: %s', $source->alias, $response->get_error_message()));

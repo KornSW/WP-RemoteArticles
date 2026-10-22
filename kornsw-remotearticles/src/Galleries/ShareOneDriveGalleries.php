@@ -27,8 +27,15 @@ final class ShareOneDriveGalleries {
   public const REST_NAMESPACE = 'kornsw-remotearticles/v1';
   public const REST_ROUTE = '/gallery';
 
-  private const CACHE_SECONDS = HOUR_IN_SECONDS;
+  /** A gallery counts as fresh for one hour ... */
+  private const FRESH_SECONDS = HOUR_IN_SECONDS;
+  /** ... and serves as fallback for three hours, still within the lifetime of the Microsoft tokens (about four hours). */
+  private const STALE_SECONDS = 3 * HOUR_IN_SECONDS;
   private const NONCE_CACHE_SECONDS = 6 * HOUR_IN_SECONDS;
+  /** The gallery request of the source can take far longer than a normal request when the source rebuilds its cache. */
+  private const GALLERY_TIMEOUT_SECONDS = 25;
+  private const VIDEO_TIMEOUT_SECONDS = 15;
+  private const ENDPOINT_TIME_LIMIT_SECONDS = 60;
   private const SIGNATURE_CONTEXT = 'kornsw-remotearticles|gallery';
 
   public function __construct(
@@ -104,6 +111,11 @@ final class ShareOneDriveGalleries {
       return new \WP_REST_Response(['items' => [], 'message' => 'Galerie nicht verfügbar.'], 404);
     }
 
+    // Slow sources (see GALLERY_TIMEOUT_SECONDS) must not hit the default PHP time limit of 30 seconds.
+    if (function_exists('set_time_limit')) {
+      set_time_limit(self::ENDPOINT_TIME_LIMIT_SECONDS);
+    }
+
     try {
       $items = $this->getItems($source, $documentUrl, $module);
     } catch (RemoteException | \InvalidArgumentException) {
@@ -116,18 +128,40 @@ final class ShareOneDriveGalleries {
   }
 
   /**
-   * Returns the gallery items (cached for one hour).
+   * Returns the gallery items: fresh from the cache, else loaded from the source, else (on failure) the last state as long
+   * as its media URLs are still valid.
    *
    * @return list<array<string, string|int>>
    * @throws RemoteException|\InvalidArgumentException
    */
   private function getItems(Source $source, string $documentUrl, ShareOneDriveModule $module): array {
     $cacheName = 'kornsw_ra_gal_' . md5($source->alias . '|' . $source->baseUrl . '|' . (string)wp_json_encode($module->toArray()));
-    $cachedItems = get_transient($cacheName);
-    if (is_array($cachedItems)) {
-      return $cachedItems;
+    $entry = get_transient($cacheName);
+    $hasEntry = is_array($entry) && isset($entry['storedAt'], $entry['items']) && is_array($entry['items']);
+    if ($hasEntry && time() - (int)$entry['storedAt'] < self::FRESH_SECONDS) {
+      return $entry['items'];
     }
 
+    try {
+      $items = $this->loadAndResolveItems($source, $documentUrl, $module);
+    } catch (RemoteException | \InvalidArgumentException $exception) {
+      if ($hasEntry) {
+        return $entry['items'];
+      }
+      throw $exception;
+    }
+
+    set_transient($cacheName, ['storedAt' => time(), 'items' => $items], self::STALE_SECONDS);
+    return $items;
+  }
+
+  /**
+   * Loads the items from the source and resolves the video streams.
+   *
+   * @return list<array<string, string|int>>
+   * @throws RemoteException|\InvalidArgumentException
+   */
+  private function loadAndResolveItems(Source $source, string $documentUrl, ShareOneDriveModule $module): array {
     $items = [];
     foreach ($this->loadItems($source, $documentUrl, $module) as $item) {
       if ($item->type === 'video') {
@@ -139,8 +173,6 @@ final class ShareOneDriveGalleries {
       }
       $items[] = $item->toArray();
     }
-
-    set_transient($cacheName, $items, self::CACHE_SECONDS);
     return $items;
   }
 
@@ -160,7 +192,7 @@ final class ShareOneDriveGalleries {
       set_transient($nonceName, $nonce, self::NONCE_CACHE_SECONDS);
     }
 
-    $body = $this->remoteClient->postAdminAjax($source, $module->buildRequestFields($nonce), $documentUrl);
+    $body = $this->remoteClient->postAdminAjax($source, $module->buildRequestFields($nonce), $documentUrl, self::GALLERY_TIMEOUT_SECONDS);
     try {
       return $this->responseParser->parse($body, $sourceHost);
     } catch (\InvalidArgumentException $exception) {
@@ -172,7 +204,7 @@ final class ShareOneDriveGalleries {
     // The cached nonce has expired: read a fresh one and try once more.
     $nonce = $this->readNonce($source, $documentUrl);
     set_transient($nonceName, $nonce, self::NONCE_CACHE_SECONDS);
-    $body = $this->remoteClient->postAdminAjax($source, $module->buildRequestFields($nonce), $documentUrl);
+    $body = $this->remoteClient->postAdminAjax($source, $module->buildRequestFields($nonce), $documentUrl, self::GALLERY_TIMEOUT_SECONDS);
     return $this->responseParser->parse($body, $sourceHost);
   }
 
@@ -194,7 +226,7 @@ final class ShareOneDriveGalleries {
    */
   private function resolveVideo(Source $source, GalleryItem $item): ?GalleryItem {
     try {
-      $target = $this->remoteClient->getRedirectTarget($source, $item->mediaUrl);
+      $target = $this->remoteClient->getRedirectTarget($source, $item->mediaUrl, self::VIDEO_TIMEOUT_SECONDS);
     } catch (RemoteException) {
       return null;
     }

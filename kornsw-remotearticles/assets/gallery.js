@@ -9,6 +9,8 @@
   'use strict';
 
   var PLACEHOLDER_SELECTOR = '[data-kornsw-ra-gallery]';
+  var MAXIMUM_PARALLEL_REQUESTS = 2;
+  var RETRY_DELAY_MILLISECONDS = 4000;
 
   /**
    * Accepts only absolute https URLs (the server validated them already; this is a second line of defense).
@@ -57,19 +59,36 @@
   }
 
   /**
-   * Loads and renders one placeholder.
+   * Requests the gallery data; retries once after a pause (the source may be slow while it rebuilds its own cache).
    */
-  function loadGallery(placeholder) {
-    var url = placeholder.getAttribute('data-kornsw-ra-gallery');
-    placeholder.removeAttribute('data-kornsw-ra-gallery');
-
-    fetch(url, { credentials: 'omit' })
+  function requestGallery(url, isRetry) {
+    return fetch(url, { credentials: 'omit' })
       .then(function (response) {
         if (!response.ok) {
           throw new Error('HTTP ' + response.status);
         }
         return response.json();
       })
+      .catch(function (error) {
+        if (isRetry) {
+          throw error;
+        }
+        return new Promise(function (resolve) {
+          window.setTimeout(resolve, RETRY_DELAY_MILLISECONDS);
+        }).then(function () {
+          return requestGallery(url, true);
+        });
+      });
+  }
+
+  /**
+   * Loads and renders one placeholder; returns a promise that settles when done.
+   */
+  function loadGallery(placeholder) {
+    var url = placeholder.getAttribute('data-kornsw-ra-gallery');
+    placeholder.removeAttribute('data-kornsw-ra-gallery');
+
+    return requestGallery(url, false)
       .then(function (data) {
         var targetHeight = parseInt(data.height, 10) || 300;
         var items = Array.isArray(data.items) ? data.items : [];
@@ -88,8 +107,23 @@
       });
   }
 
+  /**
+   * Loads all galleries with limited parallelism, so that a post with many galleries does not flood the source.
+   */
   function loadAll() {
-    Array.prototype.forEach.call(document.querySelectorAll(PLACEHOLDER_SELECTOR), loadGallery);
+    var queue = Array.prototype.slice.call(document.querySelectorAll(PLACEHOLDER_SELECTOR));
+
+    function next() {
+      var placeholder = queue.shift();
+      if (placeholder === undefined) {
+        return;
+      }
+      loadGallery(placeholder).then(next, next);
+    }
+
+    for (var worker = 0; worker < MAXIMUM_PARALLEL_REQUESTS; worker++) {
+      next();
+    }
   }
 
   if (document.readyState === 'loading') {
