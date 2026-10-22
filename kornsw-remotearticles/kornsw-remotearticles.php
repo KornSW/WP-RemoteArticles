@@ -1,8 +1,10 @@
 <?php
 /**
  * Plugin Name:       KornSW RemoteArticles
+ * Update URI: https://raw.githubusercontent.com/KornSW/WP-RemoteArticles/master/doc/kornsw-remotearticles.update.json
+ * Plugin URI: https://github.com/KornSW/WP-RemoteArticles
  * Description:       Bettet die Beiträge einer Kategorie aus einer fremden WordPress-Installation per Shortcode ein – mit Galerien, Link-Regelwerk und anpassbarem Styling.
- * Version:           0.1.0
+ * Version:           1.0.0
  * Requires at least: 7.1
  * Requires PHP:      8.5
  * Author:            KornSW
@@ -15,6 +17,13 @@ declare(strict_types=1);
 if (!defined('ABSPATH')) {
   exit;
 }
+
+
+/*************** SELF-UPDATE ***************/
+define( 'KSWKORNSWREMOTE86CD_SELF_UPDATE_DIAGNOSTICS', false );
+require_once __DIR__ . '/self-update.php';
+kswkornswremote86cd_bootstrap( __FILE__ );
+/*******************************************/
 
 define('KORNSW_RA_FILE', __FILE__);
 define('KORNSW_RA_DIR', plugin_dir_path(__FILE__));
