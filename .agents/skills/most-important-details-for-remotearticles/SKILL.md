@@ -13,7 +13,7 @@ MVP implemented 2026-10-22: source admin page, shortcode `[remote_articles alias
 
 Implementation notes:
 
-- Minimum versions (checked 2026-10-22): PHP 8.5, WordPress 7.1. PHP >= 8.4 is required anyway for `\Dom\HTMLDocument` (HTML5 parser) used by the sanitizer; never replace it by `DOMDocument`/libxml (HTML4 parser, mutation-XSS prone) or regex.
+- Minimum versions: WordPress 7.1, PHP 8.4 (user decision 2026-10-22: one below the newest stable 8.5, deliberate deviation from the "newest PHP" rule). PHP >= 8.4 is required anyway for `\Dom\HTMLDocument` (HTML5 parser) used by the sanitizer; never replace it by `DOMDocument`/libxml (HTML4 parser, mutation-XSS prone) or regex.
 - Namespace `KornSW\RemoteArticles\Embedding` must stay free of WordPress calls so `tests/run-tests.php` can test it standalone. Run tests after every change of the pipeline: `node tests/php-wasm/run.mjs tests/run-tests.php` (no native PHP on the dev machine; `cd tests/php-wasm && npm install` once).
 - End-to-end check with real WordPress: `@wp-playground/cli run-blueprint --php=8.5 --wp=7.1` with `--mount-dir <plugin dir> /wordpress/wp-content/plugins/kornsw-remotearticles` (in Git Bash set `MSYS_NO_PATHCONV=1`), runPHP steps calling `do_shortcode()`; `https://wordpress.org/news` (category `releases`) works as public read-only test source.
 - Sodium is missing in the php-wasm CLI build but always available in WordPress (bundled `sodium_compat`).

@@ -1,4 +1,4 @@
-// Runs a PHP script of this repository with PHP 8.5 compiled to WebAssembly (no native PHP needed).
+// Runs a PHP script of this repository with PHP 8.4 (the plugin's minimum version) compiled to WebAssembly (no native PHP needed).
 // Setup once:   cd tests/php-wasm && npm install
 // Usage:        node tests/php-wasm/run.mjs tests/run-tests.php
 import { loadNodeRuntime, createNodeFsMountHandler } from '@php-wasm/node';
@@ -13,7 +13,7 @@ if (script === undefined) {
   process.exit(2);
 }
 
-const php = new PHP(await loadNodeRuntime('8.5', { emscriptenOptions: { processId: 1 } }));
+const php = new PHP(await loadNodeRuntime('8.4', { emscriptenOptions: { processId: 1 } }));
 php.mkdir('/repo');
 await php.mount('/repo', createNodeFsMountHandler(repositoryRoot));
 const response = await php.cli(['php', '/repo/' + script.replaceAll('\\', '/'), ...scriptArguments]);

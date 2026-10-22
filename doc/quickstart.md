@@ -3,7 +3,7 @@
 ## Installation
 
 1. Plugin-ZIP `kornsw-remotearticles.zip` aus dem neuesten [GitHub-Release](https://github.com/KornSW/WP-RemoteArticles/releases) unter *Plugins → Installieren → Plugin hochladen* installieren und aktivieren.
-2. Voraussetzungen: WordPress 7.1 und PHP 8.5. Updates erscheinen danach automatisch in der normalen Update-Ansicht.
+2. Voraussetzungen: WordPress 7.1 und PHP 8.4 oder neuer. Updates erscheinen danach automatisch in der normalen Update-Ansicht.
 
 ## Quelle anlegen
 
@@ -93,7 +93,7 @@ Die Tests prüfen die Einbettungs-Pipeline ohne WordPress-Installation.
 php tests/run-tests.php
 ```
 
-Ohne lokales PHP mit PHP 8.5 als WebAssembly (Node.js nötig):
+Ohne lokales PHP mit PHP 8.4 als WebAssembly (Node.js nötig):
 
 ```text
 cd tests/php-wasm

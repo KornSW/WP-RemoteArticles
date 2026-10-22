@@ -6,7 +6,7 @@
  * Description:       Bettet die Beiträge einer Kategorie aus einer fremden WordPress-Installation per Shortcode ein – mit Galerien, Link-Regelwerk und anpassbarem Styling.
  * Version:           1.0.1
  * Requires at least: 7.1
- * Requires PHP:      8.5
+ * Requires PHP:      8.4
  * Author:            KornSW
  * License:           GPL-3.0
  * Text Domain:       kornsw-remotearticles
