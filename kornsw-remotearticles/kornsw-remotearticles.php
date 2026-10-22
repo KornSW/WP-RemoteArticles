@@ -4,7 +4,7 @@
  * Update URI: https://raw.githubusercontent.com/KornSW/WP-RemoteArticles/master/doc/kornsw-remotearticles.update.json
  * Plugin URI: https://github.com/KornSW/WP-RemoteArticles
  * Description:       Bettet die Beiträge einer Kategorie aus einer fremden WordPress-Installation per Shortcode ein – mit Galerien, Link-Regelwerk und anpassbarem Styling.
- * Version:           1.0.1
+ * Version:           1.0.2
  * Requires at least: 7.1
  * Requires PHP:      8.4
  * Author:            KornSW

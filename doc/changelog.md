@@ -4,6 +4,12 @@
 
 *(none)*
 
+## v 1.0.2
+released **2026-10-22**, including:
+ - Merge branch 'master' of https://github.com/KornSW/WP-RemoteArticles
+ - import-feature
+
+
 ## v 1.0.1
 released **2026-10-22**, including:
  - Merge branch 'master' of https://github.com/KornSW/WP-RemoteArticles
